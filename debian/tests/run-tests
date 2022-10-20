@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+cp -r test* "$AUTOPKGTEST_TMP/" && cd "$AUTOPKGTEST_TMP"
+for py in $(py3versions -s); do
+	xvfb-run -a dbus-launch --exit-with-session $py -Wd -m pytest -v -x -k "not test_tcp_connection_with_forwarding" --no-cov 2>&1
+done

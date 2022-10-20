@@ -1,0 +1,1 @@
+examples/aio-list-names.py examples/aio-tcp-notification.py examples/dbus-next-send.py examples/example-service.py examples/glib-list-names.py examples/mpris.py

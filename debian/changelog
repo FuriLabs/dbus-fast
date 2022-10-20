@@ -1,0 +1,5 @@
+dbus-fast (1.47.0-1) unstable; urgency=medium
+
+  * Initial release. (Closes: #1021982)
+
+ -- Edward Betts <edward@4angle.com>  Thu, 20 Oct 2022 09:54:46 +0100

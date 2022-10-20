@@ -1,0 +1,12 @@
+Tests: run-tests
+Depends: dbus-x11,
+         python3-all,
+         python3-async-timeout,
+         python3-poetry-core,
+         python3-pytest,
+         python3-pytest-asyncio,
+         python3-pytest-cov,
+         python3-setuptools,
+         xauth,
+         xvfb,
+         @

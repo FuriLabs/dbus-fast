@@ -1,0 +1,20 @@
+#!/usr/bin/make -f
+
+export PYBUILD_NAME=dbus-fast
+export PYBUILD_TEST_PYTEST=1
+export PYBUILD_TEST_ARGS=-k "not test_tcp_connection_with_forwarding" --no-cov
+export DEB_BUILD_MAINT_OPTIONS=hardening=+all
+
+%:
+	dh $@ --buildsystem=pybuild
+
+override_dh_auto_clean:
+	dh_auto_clean
+	rm -rf dbus_fast.egg-info/ src/dbus_fast/*.c src/dbus_fast/*/*.c docs/_build
+
+override_dh_auto_test:
+	xvfb-run -a dbus-launch --exit-with-session dh_auto_test --no-parallel
+
+override_dh_auto_build:
+	dh_auto_build $@ --buildsystem=pybuild
+	cd docs; PYTHONPATH=$(CURDIR)/src LC_ALL=C.UTF-8 LANGUAGE=C.UTF-8 sphinx-build -bhtml -d _build/doctrees source _build/html
