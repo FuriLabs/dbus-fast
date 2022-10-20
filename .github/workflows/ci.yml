@@ -1,0 +1,167 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+        with:
+          python-version: "3.9"
+      - uses: pre-commit/action@v2.0.3
+
+  # Make sure commit messages follow the conventional commits convention:
+  # https://www.conventionalcommits.org
+  commitlint:
+    name: Lint Commit Messages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: wagoid/commitlint-github-action@v4.1.11
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.7"
+          - "3.8"
+          - "3.9"
+          - "3.10"
+        os:
+          - ubuntu-latest
+        extension:
+          - "skip_cython"
+          - "use_cython"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install libs
+        run: sudo apt-get install -y dbus dbus-x11 python3-gi libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0
+      - name: Install poetry
+        run: pipx install poetry
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "poetry"
+      - name: Install Dependencies
+        run: |
+          if [ "${{ matrix.extension }}" = "skip_cython" ]; then
+            SKIP_CYTHON=1 poetry install
+          else
+            poetry install
+          fi
+      - name: Test with Pytest
+        run: export $(dbus-launch); poetry run pytest --cov-report=xml --timeout=5
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  release:
+    runs-on: ubuntu-latest
+    environment: release
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - test
+      - lint
+      - commitlint
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # Run semantic release:
+      # - Update CHANGELOG.md
+      # - Update version in code
+      # - Create git tag
+      # - Create GitHub release
+      # - Publish to PyPI
+      - name: Python Semantic Release
+        uses: relekang/python-semantic-release@v7.31.4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          pypi_token: ${{ secrets.PYPI_TOKEN }}
+
+  build_wheels:
+    needs: [release]
+
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: "main"
+
+      # Used to host cibuildwheel
+      - name: Set up Python
+        uses: actions/setup-python@v4
+
+      - name: Install python-semantic-release
+        run: python -m pip install python-semantic-release
+
+      - name: Get Release Tag
+        id: release_tag
+        shell: bash
+        run: |
+          echo "::set-output name=newest_release_tag::$(semantic-release print-version --current)"
+
+      - uses: actions/checkout@v3
+        with:
+          ref: "v${{ steps.release_tag.outputs.newest_release_tag }}"
+          fetch-depth: 0
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==2.10.2
+
+      - name: Build wheels
+        run: python -m cibuildwheel --output-dir wheelhouse
+        # to supply options, put them in 'env', like:
+        env:
+          CIBW_SKIP: cp36-*
+          CIBW_BEFORE_ALL_LINUX: apt-get install -y gcc || yum install -y gcc || apk add gcc
+          CIBW_BUILD_VERBOSITY: 3
+          REQUIRE_CYTHON: 1
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./wheelhouse/*.whl
+
+  upload_pypi:
+    needs: [build_wheels]
+    runs-on: ubuntu-latest
+    environment: release
+
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          # unpacks default artifact into dist/
+          # if `name: artifact` is omitted, the action will create extra parent dir
+          name: artifact
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@v1.5.0
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+
+          # To test: repository_url: https://test.pypi.org/legacy/
