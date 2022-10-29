@@ -3,12 +3,14 @@ Maintainer: Debian Python Team <team+python@tracker.debian.org>
 Uploaders: Edward Betts <edward@4angle.com>
 Section: python
 Priority: optional
-Build-Depends: dbus-x11 <!nocheck>,
+Build-Depends: cython3,
+               dbus-x11 <!nocheck>,
                debhelper-compat (= 13),
                dh-sequence-python3,
                dh-sequence-sphinxdoc,
                pybuild-plugin-pyproject,
                python3-all,
+               python3-all-dev,
                python3-async-timeout,
                python3-poetry-core,
                python3-pytest <!nocheck>,

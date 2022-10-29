@@ -4,6 +4,7 @@ export PYBUILD_NAME=dbus-fast
 export PYBUILD_TEST_PYTEST=1
 export PYBUILD_TEST_ARGS=-k "not test_tcp_connection_with_forwarding" --no-cov
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
+export REQUIRE_CYTHON=1
 
 %:
 	dh $@ --buildsystem=pybuild
