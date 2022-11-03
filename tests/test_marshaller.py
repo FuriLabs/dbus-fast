@@ -321,6 +321,158 @@ def test_unmarshall_bluez_interfaces_added_message():
     ]
 
 
+def test_unmarshall_bluez_interfaces_removed_message():
+    bluez_interfaces_removed_message = (
+        b'l\4\1\1\222\0\0\0\377@-\0~\0\0\0\1\1o\0\1\0\0\0/\0\0\0\0\0\0\0\2\1s\0"\0\0\0'
+        b"org.freedesktop.DBus.ObjectManager\0\0\0\0\0\0\3\1s\0\21\0\0\0InterfacesRemoved"
+        b"\0\0\0\0\0\0\0\10\1g\0\3oas\0\0\0\0\0\0\0\0\7\1s\0\5\0\0\0:1.12\0\0\0%\0\0\0"
+        b"/org/bluez/hci0/dev_5F_13_47_38_26_55\0\0\0b\0\0\0\37\0\0\0org.freedesktop.DBus"
+        b".Properties\0#\0\0\0org.freedesktop.DBus.Introspectable\0\21\0\0\0org.bluez.Dev"
+        b"ice1\0"
+    )
+
+    stream = io.BytesIO(bluez_interfaces_removed_message)
+    unmarshaller = Unmarshaller(stream)
+    assert unmarshaller.unmarshall()
+    message = unmarshaller.message
+    assert message is not None
+    assert message.body == [
+        "/org/bluez/hci0/dev_5F_13_47_38_26_55",
+        [
+            "org.freedesktop.DBus.Properties",
+            "org.freedesktop.DBus.Introspectable",
+            "org.bluez.Device1",
+        ],
+    ]
+    assert message.sender == ":1.12"
+    assert message.path == "/"
+    assert message.interface == "org.freedesktop.DBus.ObjectManager"
+    assert message.member == "InterfacesRemoved"
+    assert message.signature == "oas"
+    assert message.message_type == MessageType.SIGNAL
+    assert message.flags == MessageFlag.NO_REPLY_EXPECTED
+    assert message.serial == 2965759
+    assert message.destination is None
+    unpacked = unpack_variants(message.body)
+    assert unpacked == [
+        "/org/bluez/hci0/dev_5F_13_47_38_26_55",
+        [
+            "org.freedesktop.DBus.Properties",
+            "org.freedesktop.DBus.Introspectable",
+            "org.bluez.Device1",
+        ],
+    ]
+
+
+def test_unmarshall_bluez_properties_changed_with_service_data():
+    bluez_properties_changed_message = (
+        b"l\4\1\1\334\0\0\0@\236.\0\226\0\0\0\1\1o\0%\0\0\0/org/bluez/hci0/dev_58_2D_34_60_DA_1F"
+        b"\0\0\0\2\1s\0\37\0\0\0org.freedesktop.DBus.Properties\0\3\1s\0\21\0\0\0PropertiesChanged"
+        b"\0\0\0\0\0\0\0\10\1g\0\10sa{sv}as\0\0\0\7\1s\0\5\0\0\0:1.12\0\0\0\21\0\0\0org.bluez.Devi"
+        b"ce1\0\0\0\270\0\0\0\0\0\0\0\4\0\0\0RSSI\0\1n\0\301\377\0\0\v\0\0\0ServiceData\0\5a{sv}"
+        b"\0\0\210\0\0\0\0\0\0\0$\0\0\0000000fdcd-0000-1000-8000-00805f9b34fb\0\2ay\0\0\0\0\24\0"
+        b"\0\0\10\22\37\332`4-X\2\1U\17\1\315\t\4\5\0\0\0$\0\0\0000000fe95-0000-1000-8000-00805f"
+        b"9b34fb\0\2ay\0\0\0\0\f\0\0\0000X\203\n\2\37\332`4-X\10\0\0\0\0"
+    )
+
+    stream = io.BytesIO(bluez_properties_changed_message)
+    unmarshaller = Unmarshaller(stream)
+    assert unmarshaller.unmarshall()
+    message = unmarshaller.message
+    assert message is not None
+    assert message.body == [
+        "org.bluez.Device1",
+        {
+            "RSSI": Variant("n", -63),
+            "ServiceData": Variant(
+                "a{sv}",
+                {
+                    "0000fdcd-0000-1000-8000-00805f9b34fb": Variant(
+                        "ay",
+                        bytearray(
+                            b"\x08\x12\x1f\xda`4-X\x02\x01U\x0f\x01\xcd\t\x04\x05\x00\x00\x00"
+                        ),
+                    ),
+                    "0000fe95-0000-1000-8000-00805f9b34fb": Variant(
+                        "ay", bytearray(b"0X\x83\n\x02\x1f\xda`4-X\x08")
+                    ),
+                },
+            ),
+        },
+        [],
+    ]
+    assert message.sender == ":1.12"
+    assert message.path == "/org/bluez/hci0/dev_58_2D_34_60_DA_1F"
+    assert message.interface == "org.freedesktop.DBus.Properties"
+    assert message.member == "PropertiesChanged"
+    assert message.signature == "sa{sv}as"
+    assert message.message_type == MessageType.SIGNAL
+    assert message.flags == MessageFlag.NO_REPLY_EXPECTED
+    assert message.serial == 3055168
+    assert message.destination is None
+    unpacked = unpack_variants(message.body)
+    assert unpacked == [
+        "org.bluez.Device1",
+        {
+            "RSSI": -63,
+            "ServiceData": {
+                "0000fdcd-0000-1000-8000-00805f9b34fb": bytearray(
+                    b"\x08\x12\x1f\xda"
+                    b"`4-X"
+                    b"\x02\x01U\x0f"
+                    b"\x01\xcd\t\x04"
+                    b"\x05\x00\x00\x00"
+                ),
+                "0000fe95-0000-1000-8000-00805f9b34fb": bytearray(
+                    b"0X\x83\n" b"\x02\x1f\xda`" b"4-X\x08"
+                ),
+            },
+        },
+        [],
+    ]
+
+
+def test_unmarshall_multiple_messages():
+    """Test we can unmarshall multiple messages in a single packet."""
+    multiple_message_packet = (
+        b"l\4\1\0014\0\0\0J\27\230\0\225\0\0\0\1\1o\0%\0\0\0/org/bluez/hci0/dev_F0_B3_EC_15_7F_8E\0\0\0\2\1s\0\37\0\0\0"
+        b"org.freedesktop.DBus.Properties\0\3\1s\0\21\0\0\0PropertiesChanged\0\0\0\0\0\0\0\10\1g\0\10sa{sv}as\0\0\0\7\1"
+        b"s\0\4\0\0\0:1.4\0\0\0\0\21\0\0\0org.bluez.Device1\0\0\0\16\0\0\0\0\0\0\0\4\0\0\0RSSI\0\1n\0\264\377\0\0\0\0\0"
+        b"\0l\4\1\0014\0\0\0K\27\230\0\225\0\0\0\1\1o\0%\0\0\0/org/bluez/hci0/dev_3F_70_98_0F_08_CB\0\0\0\2\1s\0\37\0\0"
+        b"\0org.freedesktop.DBus.Properties\0\3\1s\0\21\0\0\0PropertiesChanged\0\0\0\0\0\0\0\10\1g\0\10sa{sv}as\0\0\0\7"
+        b"\1s\0\4\0\0\0:1.4\0\0\0\0\21\0\0\0org.bluez.Device1\0\0\0\16\0\0\0\0\0\0\0\4\0\0\0RSSI\0\1n\0\260\377\0\0\0\0"
+        b"\0\0l\4\1\0014\0\0\0L\27\230\0\225\0\0\0\1\1o\0%\0\0\0/org/bluez/hci0/dev_D8_35_67_A4_F5_A5\0\0\0\2\1s\0\37\0"
+        b"\0\0org.freedesktop.DBus.Properties\0\3\1s\0\21\0\0\0PropertiesChanged\0\0\0\0\0\0\0\10\1g\0\10sa{sv}as\0\0\0"
+        b"\7\1s\0\4\0\0\0:1.4\0\0\0\0\21\0\0\0org.bluez.Device1\0\0\0\16\0\0\0\0\0\0\0\4\0\0\0RSSI\0\1n\0\242\377\0\0\0"
+        b"\0\0\0"
+    )
+    stream = io.BytesIO(multiple_message_packet)
+    unmarshaller = Unmarshaller(stream)
+    assert unmarshaller.unmarshall()
+    message = unmarshaller.message
+    assert message is not None
+    unpacked = unpack_variants(message.body)
+    assert unpacked == ["org.bluez.Device1", {"RSSI": -76}, []]
+
+    unmarshaller.reset()
+    assert unmarshaller.unmarshall()
+    message = unmarshaller.message
+    assert message is not None
+    unpacked = unpack_variants(message.body)
+    assert unpacked == ["org.bluez.Device1", {"RSSI": -80}, []]
+
+    unmarshaller.reset()
+    assert unmarshaller.unmarshall()
+    message = unmarshaller.message
+    assert message is not None
+    unpacked = unpack_variants(message.body)
+    assert unpacked == ["org.bluez.Device1", {"RSSI": -94}, []]
+
+    unmarshaller.reset()
+    with pytest.raises(EOFError):
+        unmarshaller.unmarshall()
+
+
 def test_ay_buffer():
     body = [bytes(10000)]
     msg = Message(path="/test", member="test", signature="ay", body=body)

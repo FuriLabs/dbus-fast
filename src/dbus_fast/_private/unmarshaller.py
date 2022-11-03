@@ -70,6 +70,9 @@ SIGNATURE_TREE_AS_TYPES_0 = SIGNATURE_TREE_AS.types[0]
 SIGNATURE_TREE_A_SV = get_signature_tree("a{sv}")
 SIGNATURE_TREE_A_SV_TYPES_0 = SIGNATURE_TREE_A_SV.types[0]
 
+SIGNATURE_TREE_OAS = get_signature_tree("oas")
+SIGNATURE_TREE_OAS_TYPES_1 = SIGNATURE_TREE_OAS.types[1]
+
 SIGNATURE_TREE_AY_TYPES_0 = SIGNATURE_TREE_AY.types[0]
 SIGNATURE_TREE_A_QV = get_signature_tree("a{qv}")
 SIGNATURE_TREE_A_QV_TYPES_0 = SIGNATURE_TREE_A_QV.types[0]
@@ -80,6 +83,10 @@ SIGNATURE_TREE_SA_SV_AS_TYPES_2 = SIGNATURE_TREE_SA_SV_AS.types[2]
 
 SIGNATURE_TREE_OA_SA_SV = get_signature_tree("oa{sa{sv}}")
 SIGNATURE_TREE_OA_SA_SV_TYPES_1 = SIGNATURE_TREE_OA_SA_SV.types[1]
+
+TOKEN_O_AS_INT = ord("o")
+TOKEN_S_AS_INT = ord("s")
+TOKEN_G_AS_INT = ord("g")
 
 HEADER_MESSAGE_ARG_NAME = {
     1: "path",
@@ -135,7 +142,7 @@ class MarshallerStreamEndError(Exception):
 try:
     import cython
 except ImportError:
-    from ._cython_compat import FakeCython as cython
+    from ._cython_compat import FAKE_CYTHON as cython
 
 #
 # Alignment padding is handled with the following formula below
@@ -417,8 +424,9 @@ class Unmarshaller:
         if token == "{":
             result_dict = {}
             beginning_pos = self._pos
-            child_0 = child_type.children[0]
-            child_1 = child_type.children[1]
+            children = child_type.children
+            child_0 = children[0]
+            child_1 = children[1]
             child_0_token = child_0.token
             child_1_token = child_1.token
             # Strings with variant values are the most common case
@@ -442,7 +450,6 @@ class Unmarshaller:
             else:
                 reader_1 = self._readers[child_1_token]
                 reader_0 = self._readers[child_0_token]
-
                 while self._pos - beginning_pos < array_length:
                     self._pos += -self._pos & 7  # align 8
                     key = reader_0(self, child_0)
@@ -455,7 +462,11 @@ class Unmarshaller:
 
         result_list = []
         beginning_pos = self._pos
-        reader = self._readers[child_type.token]
+        if token in "os":
+            while self._pos - beginning_pos < array_length:
+                result_list.append(self._read_string_unpack())
+            return result_list
+        reader = self._readers[token]
         while self._pos - beginning_pos < array_length:
             result_list.append(reader(self, child_type))
         return result_list
@@ -476,16 +487,17 @@ class Unmarshaller:
             signature_len = buf[self._pos]  # byte
             o = self._pos + 1
             self._pos += signature_len + 2  # one for the byte, one for the '\0'
-            token = buf[o : o + signature_len].decode()
+            token_as_int = buf[o]
             # Now that we have the token we can read the variant value
             key = HEADER_MESSAGE_ARG_NAME[field_0]
             # Strings and signatures are the most common types
             # so we inline them for performance
-            if token in "os":
+            if token_as_int == TOKEN_O_AS_INT or token_as_int == TOKEN_S_AS_INT:
                 headers[key] = self._read_string_unpack()
-            elif token == "g":
+            elif token_as_int == TOKEN_G_AS_INT:
                 headers[key] = self._read_signature()
             else:
+                token = buf[o : o + signature_len].decode()
                 # There shouldn't be any other types in the header
                 # but just in case, we'll read it using the slow path
                 headers[key] = readers[token](self, get_signature_tree(token).types[0])
@@ -515,7 +527,7 @@ class Unmarshaller:
             self._body_len = _cast_uint32_native(self._buf, 4)  # pragma: no cover
             self._serial = _cast_uint32_native(self._buf, 8)  # pragma: no cover
             self._header_len = _cast_uint32_native(self._buf, 12)  # pragma: no cover
-        if endian == LITTLE_ENDIAN:
+        elif endian == LITTLE_ENDIAN:
             (
                 self._body_len,
                 self._serial,
@@ -567,6 +579,12 @@ class Unmarshaller:
             body = [
                 self._read_string_unpack(),
                 self._read_array(SIGNATURE_TREE_OA_SA_SV_TYPES_1),
+            ]
+        elif signature == "oas":
+            tree = SIGNATURE_TREE_OAS
+            body = [
+                self._read_string_unpack(),
+                self._read_array(SIGNATURE_TREE_OAS_TYPES_1),
             ]
         else:
             tree = get_signature_tree(signature)

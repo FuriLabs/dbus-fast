@@ -52,12 +52,18 @@ cdef object SIGNATURE_TREE_A_SV_TYPES_0
 cdef object SIGNATURE_TREE_SA_SV_AS
 cdef object SIGNATURE_TREE_SA_SV_AS_TYPES_1
 cdef object SIGNATURE_TREE_SA_SV_AS_TYPES_2
+cdef object SIGNATURE_TREE_OAS
+cdef object SIGNATURE_TREE_OAS_TYPES_1
 cdef object SIGNATURE_TREE_OA_SA_SV
 cdef object SIGNATURE_TREE_OA_SA_SV_TYPES_1
 cdef object SIGNATURE_TREE_AY
 cdef object SIGNATURE_TREE_AY_TYPES_0
 cdef object SIGNATURE_TREE_A_QV
 cdef object SIGNATURE_TREE_A_QV_TYPES_0
+
+cdef unsigned int TOKEN_O_AS_INT
+cdef unsigned int TOKEN_S_AS_INT
+cdef unsigned int TOKEN_G_AS_INT
 
 
 cpdef get_signature_tree
@@ -111,7 +117,7 @@ cdef class Unmarshaller:
 
     cpdef read_boolean(self, object type_)
 
-    cdef bint _read_boolean(self)
+    cdef _read_boolean(self)
 
     cpdef read_uint32_unpack(self, object type_)
 
@@ -168,6 +174,7 @@ cdef class Unmarshaller:
         beginning_pos=cython.ulong,
         o=cython.ulong,
         field_0=cython.uint,
+        token_as_int=cython.uint,
         signature_len=cython.uint,
     )
     cdef header_fields(self, unsigned int header_length)
