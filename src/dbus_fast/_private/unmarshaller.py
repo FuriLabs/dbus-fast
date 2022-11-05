@@ -12,6 +12,8 @@ from ..signature import SignatureType, Variant, get_signature_tree
 from .constants import BIG_ENDIAN, LITTLE_ENDIAN, PROTOCOL_VERSION
 
 MAX_UNIX_FDS = 16
+MAX_UNIX_FDS_SIZE = array.array("i").itemsize
+UNIX_FDS_CMSG_LENGTH = socket.CMSG_LEN(MAX_UNIX_FDS_SIZE)
 
 UNPACK_SYMBOL = {LITTLE_ENDIAN: "<", BIG_ENDIAN: ">"}
 
@@ -63,12 +65,17 @@ SIGNATURE_TREE_B = get_signature_tree("b")
 SIGNATURE_TREE_N = get_signature_tree("n")
 SIGNATURE_TREE_S = get_signature_tree("s")
 SIGNATURE_TREE_O = get_signature_tree("o")
+SIGNATURE_TREE_U = get_signature_tree("u")
+SIGNATURE_TREE_Y = get_signature_tree("y")
 
 SIGNATURE_TREE_AY = get_signature_tree("ay")
 SIGNATURE_TREE_AS = get_signature_tree("as")
 SIGNATURE_TREE_AS_TYPES_0 = SIGNATURE_TREE_AS.types[0]
 SIGNATURE_TREE_A_SV = get_signature_tree("a{sv}")
 SIGNATURE_TREE_A_SV_TYPES_0 = SIGNATURE_TREE_A_SV.types[0]
+
+SIGNATURE_TREE_AO = get_signature_tree("ao")
+SIGNATURE_TREE_AO_TYPES_0 = SIGNATURE_TREE_AO.types[0]
 
 SIGNATURE_TREE_OAS = get_signature_tree("oas")
 SIGNATURE_TREE_OAS_TYPES_1 = SIGNATURE_TREE_OAS.types[1]
@@ -84,9 +91,16 @@ SIGNATURE_TREE_SA_SV_AS_TYPES_2 = SIGNATURE_TREE_SA_SV_AS.types[2]
 SIGNATURE_TREE_OA_SA_SV = get_signature_tree("oa{sa{sv}}")
 SIGNATURE_TREE_OA_SA_SV_TYPES_1 = SIGNATURE_TREE_OA_SA_SV.types[1]
 
+SIGNATURE_TREE_A_OA_SA_SV = get_signature_tree("a{oa{sa{sv}}}")
+SIGNATURE_TREE_A_OA_SA_SV_TYPES_0 = SIGNATURE_TREE_A_OA_SA_SV.types[0]
+
 TOKEN_O_AS_INT = ord("o")
 TOKEN_S_AS_INT = ord("s")
 TOKEN_G_AS_INT = ord("g")
+
+ARRAY = array.array
+SOL_SOCKET = socket.SOL_SOCKET
+SCM_RIGHTS = socket.SCM_RIGHTS
 
 HEADER_MESSAGE_ARG_NAME = {
     1: "path",
@@ -102,6 +116,8 @@ HEADER_MESSAGE_ARG_NAME = {
 
 
 READER_TYPE = Callable[["Unmarshaller", SignatureType], Any]
+
+MARSHALL_STREAM_END_ERROR = BlockingIOError
 
 
 def unpack_parser_factory(unpack_from: Callable, size: int) -> READER_TYPE:
@@ -126,17 +142,6 @@ def build_simple_parsers(
             Struct(f"{UNPACK_SYMBOL[endian]}{ctype}").unpack_from, size
         )
     return parsers
-
-
-class MarshallerStreamEndError(Exception):
-    """This exception is raised when the end of the stream is reached.
-
-    This means more data is expected on the wire that has not yet been
-    received. The caller should call unmarshall later when more data is
-    available.
-    """
-
-    pass
 
 
 try:
@@ -207,6 +212,13 @@ class Unmarshaller:
 
         Call this before processing a new message.
         """
+        self._reset()
+
+    def _reset(self) -> None:
+        """Reset the unmarshaller to its initial state.
+
+        Call this before processing a new message.
+        """
         self._unix_fds = []
         self._buf.clear()
         self._message = None
@@ -229,22 +241,15 @@ class Unmarshaller:
     def _read_sock(self, length: int) -> bytes:
         """reads from the socket, storing any fds sent and handling errors
         from the read itself"""
-        unix_fd_list = array.array("i")
-
-        try:
-            msg, ancdata, *_ = self._sock.recvmsg(
-                length, socket.CMSG_LEN(MAX_UNIX_FDS * unix_fd_list.itemsize)
-            )
-        except BlockingIOError:
-            raise MarshallerStreamEndError()
-
+        # This will raise BlockingIOError if there is no data to read
+        # which we store in the MARSHALL_STREAM_END_ERROR object
+        msg, ancdata, _flags, _addr = self._sock.recvmsg(length, UNIX_FDS_CMSG_LENGTH)
         for level, type_, data in ancdata:
-            if not (level == socket.SOL_SOCKET and type_ == socket.SCM_RIGHTS):
+            if not (level == SOL_SOCKET and type_ == SCM_RIGHTS):
                 continue
-            unix_fd_list.frombytes(
-                data[: len(data) - (len(data) % unix_fd_list.itemsize)]
+            self._unix_fds.extend(
+                ARRAY("i", data[: len(data) - (len(data) % MAX_UNIX_FDS_SIZE)])
             )
-            self._unix_fds.extend(list(unix_fd_list))
 
         return msg
 
@@ -252,7 +257,7 @@ class Unmarshaller:
         """
         Read from underlying socket into buffer.
 
-        Raises MarshallerStreamEndError if there is not enough data to be read.
+        Raises BlockingIOError if there is not enough data to be read.
 
         :arg pos:
             The pos to read to. If not enough bytes are available in the
@@ -270,10 +275,10 @@ class Unmarshaller:
         if data == b"":
             raise EOFError()
         if data is None:
-            raise MarshallerStreamEndError()
+            raise MARSHALL_STREAM_END_ERROR
         self._buf += data
         if len(data) + start_len != pos:
-            raise MarshallerStreamEndError()
+            raise MARSHALL_STREAM_END_ERROR
 
     def read_uint32_unpack(self, type_: SignatureType) -> int:
         return self._read_uint32_unpack()
@@ -374,6 +379,15 @@ class Unmarshaller:
                 self._read_array(SIGNATURE_TREE_A_SV_TYPES_0),
                 False,
             )
+        elif signature == "ao":
+            return Variant(
+                SIGNATURE_TREE_AO, self._read_array(SIGNATURE_TREE_AO_TYPES_0), False
+            )
+        elif signature == "u":
+            return Variant(SIGNATURE_TREE_U, self._read_uint32_unpack(), False)
+        elif signature == "y":
+            self._pos += 1
+            return Variant(SIGNATURE_TREE_Y, self._buf[self._pos - 1], False)
         tree = get_signature_tree(signature)
         signature_type = tree.types[0]
         return Variant(
@@ -442,7 +456,7 @@ class Unmarshaller:
                     self._pos += -self._pos & 7  # align 8
                     key = self._read_uint16_unpack()
                     result_dict[key] = self._read_variant()
-            elif child_0_token == "s" and child_1_token == "a":
+            elif child_0_token in "os" and child_1_token == "a":
                 while self._pos - beginning_pos < array_length:
                     self._pos += -self._pos & 7  # align 8
                     key = self._read_string_unpack()
@@ -586,6 +600,9 @@ class Unmarshaller:
                 self._read_string_unpack(),
                 self._read_array(SIGNATURE_TREE_OAS_TYPES_1),
             ]
+        elif signature == "a{oa{sa{sv}}}":
+            tree = SIGNATURE_TREE_A_OA_SA_SV
+            body = [self._read_array(SIGNATURE_TREE_A_OA_SA_SV_TYPES_0)]
         else:
             tree = get_signature_tree(signature)
             body = [self._readers[t.token](self, t) for t in tree.types]
@@ -606,7 +623,16 @@ class Unmarshaller:
     def unmarshall(self) -> Optional[Message]:
         """Unmarshall the message.
 
-        The underlying read function will raise MarshallerStreamEndError
+        The underlying read function will raise BlockingIOError if the
+        if there are not enough bytes in the buffer. This allows unmarshall
+        to be resumed when more data comes in over the wire.
+        """
+        return self._unmarshall()
+
+    def _unmarshall(self) -> Optional[Message]:
+        """Unmarshall the message.
+
+        The underlying read function will raise BlockingIOError if the
         if there are not enough bytes in the buffer. This allows unmarshall
         to be resumed when more data comes in over the wire.
         """
@@ -614,7 +640,7 @@ class Unmarshaller:
             if not self._msg_len:
                 self._read_header()
             self._read_body()
-        except MarshallerStreamEndError:
+        except MARSHALL_STREAM_END_ERROR:
             return None
         return self._message
 

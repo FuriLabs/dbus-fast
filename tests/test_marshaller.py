@@ -26,6 +26,9 @@ def print_buf(buf):
 with open(os.path.dirname(__file__) + "/data/messages.json") as f:
     table = json.load(f)
 
+with open(os.path.dirname(__file__) + "/data/get_managed_objects.hex") as fp:
+    get_managed_objects_msg = fp.read()
+
 
 def json_to_message(message: Dict[str, Any]) -> Message:
     copy = dict(message)
@@ -483,3 +486,62 @@ def test_ay_buffer():
 
 def tests_fallback_no_cython():
     assert FakeCython().compiled is False
+
+
+def test_unmarshall_large_message():
+
+    stream = io.BytesIO(bytes.fromhex(get_managed_objects_msg))
+    unmarshaller = Unmarshaller(stream)
+    unmarshaller.unmarshall()
+    message = unmarshaller.message
+    unpacked = unpack_variants(message.body)
+    objects = unpacked[0]
+    assert objects["/org/bluez/hci0"] == {
+        "org.bluez.Adapter1": {
+            "Address": "00:1A:7D:DA:71:04",
+            "AddressType": "public",
+            "Alias": "homeassistant",
+            "Class": 2883584,
+            "Discoverable": False,
+            "DiscoverableTimeout": 180,
+            "Discovering": True,
+            "Modalias": "usb:v1D6Bp0246d053F",
+            "Name": "homeassistant",
+            "Pairable": False,
+            "PairableTimeout": 0,
+            "Powered": True,
+            "Roles": ["central", "peripheral"],
+            "UUIDs": [
+                "0000110e-0000-1000-8000-00805f9b34fb",
+                "0000110a-0000-1000-8000-00805f9b34fb",
+                "00001200-0000-1000-8000-00805f9b34fb",
+                "0000110b-0000-1000-8000-00805f9b34fb",
+                "00001108-0000-1000-8000-00805f9b34fb",
+                "0000110c-0000-1000-8000-00805f9b34fb",
+                "00001800-0000-1000-8000-00805f9b34fb",
+                "00001801-0000-1000-8000-00805f9b34fb",
+                "0000180a-0000-1000-8000-00805f9b34fb",
+                "00001112-0000-1000-8000-00805f9b34fb",
+            ],
+        },
+        "org.bluez.GattManager1": {},
+        "org.bluez.LEAdvertisingManager1": {
+            "ActiveInstances": 0,
+            "SupportedIncludes": ["tx-power", "appearance", "local-name"],
+            "SupportedInstances": 5,
+        },
+        "org.bluez.Media1": {},
+        "org.bluez.NetworkServer1": {},
+        "org.freedesktop.DBus.Introspectable": {},
+        "org.freedesktop.DBus.Properties": {},
+    }
+    assert objects["/org/bluez/hci0/dev_CD_A3_FA_D1_50_56/service000b/char000c"] == {
+        "org.bluez.GattCharacteristic1": {
+            "Flags": ["read"],
+            "Service": "/org/bluez/hci0/dev_CD_A3_FA_D1_50_56/service000b",
+            "UUID": "e604e95d-a759-4817-87d3-aa005083a0d1",
+            "Value": bytearray(b""),
+        },
+        "org.freedesktop.DBus.Introspectable": {},
+        "org.freedesktop.DBus.Properties": {},
+    }

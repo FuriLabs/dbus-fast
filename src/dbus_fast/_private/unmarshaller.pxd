@@ -2,8 +2,15 @@
 
 import cython
 
-from ..signature import SignatureType
+from ..message cimport Message
+from ..signature cimport Variant
 
+
+cdef object MAX_UNIX_FDS_SIZE
+cdef object ARRAY
+cdef object UNIX_FDS_CMSG_LENGTH
+cdef object SOL_SOCKET
+cdef object SCM_RIGHTS
 
 cdef unsigned int UINT32_SIZE
 cdef unsigned int INT16_SIZE
@@ -34,8 +41,6 @@ cdef object INT16_UNPACK_BIG_ENDIAN
 cdef object UINT16_UNPACK_LITTLE_ENDIAN
 cdef object UINT16_UNPACK_BIG_ENDIAN
 
-cdef object Variant
-cdef object Message
 cdef object MESSAGE_TYPE_MAP
 cdef object MESSAGE_FLAG_MAP
 cdef object HEADER_MESSAGE_ARG_NAME
@@ -45,8 +50,13 @@ cdef object SIGNATURE_TREE_B
 cdef object SIGNATURE_TREE_N
 cdef object SIGNATURE_TREE_O
 cdef object SIGNATURE_TREE_S
+cdef object SIGNATURE_TREE_U
+cdef object SIGNATURE_TREE_Y
+
 cdef object SIGNATURE_TREE_AS
 cdef object SIGNATURE_TREE_AS_TYPES_0
+cdef object SIGNATURE_TREE_AO
+cdef object SIGNATURE_TREE_AO_TYPES_0
 cdef object SIGNATURE_TREE_A_SV
 cdef object SIGNATURE_TREE_A_SV_TYPES_0
 cdef object SIGNATURE_TREE_SA_SV_AS
@@ -60,13 +70,17 @@ cdef object SIGNATURE_TREE_AY
 cdef object SIGNATURE_TREE_AY_TYPES_0
 cdef object SIGNATURE_TREE_A_QV
 cdef object SIGNATURE_TREE_A_QV_TYPES_0
+cdef object SIGNATURE_TREE_A_OA_SA_SV
+cdef object SIGNATURE_TREE_A_OA_SA_SV_TYPES_0
 
 cdef unsigned int TOKEN_O_AS_INT
 cdef unsigned int TOKEN_S_AS_INT
 cdef unsigned int TOKEN_G_AS_INT
 
+cdef object MARSHALL_STREAM_END_ERROR
 
-cpdef get_signature_tree
+cdef get_signature_tree
+
 
 cdef inline unsigned long _cast_uint32_native(const char * payload, unsigned int offset):
     cdef unsigned long *u32p = <unsigned long *> &payload[offset]
@@ -81,8 +95,6 @@ cdef inline unsigned short _cast_uint16_native(const char *  payload, unsigned i
     return u16p[0]
 
 
-cdef class MarshallerStreamEndError(Exception):
-    pass
 
 cdef class Unmarshaller:
 
@@ -104,9 +116,14 @@ cdef class Unmarshaller:
     cdef object _int16_unpack
     cdef object _uint16_unpack
 
+    cdef _reset(self)
+
     cpdef reset(self)
 
-    cdef bytes _read_sock(self, unsigned long length)
+    @cython.locals(
+        msg=cython.bytes,
+    )
+    cdef bytes _read_sock(self, object length)
 
     @cython.locals(
         start_len=cython.ulong,
@@ -167,6 +184,8 @@ cdef class Unmarshaller:
         body=cython.list
     )
     cdef _read_body(self)
+
+    cdef _unmarshall(self)
 
     cpdef unmarshall(self)
 
