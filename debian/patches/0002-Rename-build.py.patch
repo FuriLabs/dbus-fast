@@ -103,7 +103,7 @@ index cc8bc17..0000000
 -            raise
 -        pass
 diff --git a/pyproject.toml b/pyproject.toml
-index a517c6d..8758ab2 100644
+index 733dc2d..09554c3 100644
 --- a/pyproject.toml
 +++ b/pyproject.toml
 @@ -14,7 +14,7 @@ classifiers = [

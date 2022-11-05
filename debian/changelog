@@ -1,3 +1,12 @@
+dbus-fast (1.72.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Cython is broken on big endian architectures, so disable it on big endian
+    architectures.
+  * Disable the test_glib_properties test which fails with a segfault.
+
+ -- Edward Betts <edward@4angle.com>  Tue, 08 Nov 2022 12:31:30 +0000
+
 dbus-fast (1.61.1-1) unstable; urgency=medium
 
   * New upstream release.

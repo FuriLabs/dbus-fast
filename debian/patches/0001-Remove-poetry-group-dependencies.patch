@@ -1,34 +1,29 @@
 From: Edward Betts <edward@4angle.com>
-Date: Thu, 20 Oct 2022 09:48:58 +0100
+Date: Sat, 5 Nov 2022 11:48:51 +0000
 Subject: Remove poetry group dependencies
 
-The version of poetry in Debian testing doesn't support group
-dependencies in pyproject.toml, so remove them.
 ---
- pyproject.toml | 9 ---------
- 1 file changed, 9 deletions(-)
+ pyproject.toml | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/pyproject.toml b/pyproject.toml
-index f1486a9..a517c6d 100644
+index 09554c3..c4919a6 100644
 --- a/pyproject.toml
 +++ b/pyproject.toml
-@@ -37,19 +37,10 @@ sphinx-rtd-theme = {version = "^1.0.0", optional = true}
- [tool.poetry.extras]
- docs = ["myst-parser", "sphinx", "sphinx-rtd-theme", "sphinxcontrib-asyncio", "sphinxcontrib-fulltoc"]
+@@ -28,14 +28,14 @@ python = "^3.7"
+ async-timeout = {version = ">=3.0.0", python = "<3.11"}
  
+ # duplicated in docs/requirements.txt for readthedocs compatibility
 -[tool.poetry.group.docs.dependencies]
--myst-parser = "^0.18.0"
--sphinx = "^5.1.1"
--sphinx-rtd-theme = "^1.0.0"
--sphinxcontrib-asyncio = "^0.3.0"
--sphinxcontrib-fulltoc = "^1.2.0"
--
- [tool.poetry.dev-dependencies]
++# [tool.poetry.oup.docs.dependencies]
+ myst-parser = "^0.18.0"
+ sphinx = "^5.1.1"
+ sphinx-rtd-theme = "^1.0.0"
+ sphinxcontrib-asyncio = "^0.3.0"
+ sphinxcontrib-fulltoc = "^1.2.0"
+ 
+-[tool.poetry.group.dev.dependencies]
++# [tool.poetry.group.dev.dependencies]
  pytest = "^7.0"
  pytest-cov = "^3.0"
  pytest-asyncio = "^0.19.0"
--
--[tool.poetry.group.dev.dependencies]
- pycairo = "^1.21.0"
- PyGObject = "^3.42.2"
- Cython = "^0.29.32"
