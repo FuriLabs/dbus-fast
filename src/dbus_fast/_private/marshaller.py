@@ -5,6 +5,8 @@ from ..signature import SignatureType, Variant, get_signature_tree
 
 PACK_UINT32 = Struct("<I").pack
 PACKED_UINT32_ZERO = PACK_UINT32(0)
+PACKED_BOOL_FALSE = PACK_UINT32(int(0))
+PACKED_BOOL_TRUE = PACK_UINT32(int(1))
 
 
 class Marshaller:
@@ -22,6 +24,9 @@ class Marshaller:
     def buffer(self) -> bytearray:
         return self._buf
 
+    def _buffer(self) -> bytearray:
+        return self._buf
+
     def align(self, n):
         return self._align(n)
 
@@ -29,12 +34,16 @@ class Marshaller:
         offset = n - len(self._buf) % n
         if offset == 0 or offset == n:
             return 0
-        self._buf.extend(bytes(offset))
+        for _ in range(offset):
+            self._buf.append(0)
         return offset
 
     def write_boolean(self, boolean: bool, type_: SignatureType) -> int:
+        return self._write_boolean(boolean)
+
+    def _write_boolean(self, boolean: bool) -> int:
         written = self._align(4)
-        self._buf.extend(PACK_UINT32(int(boolean)))
+        self._buf += PACKED_BOOL_TRUE if boolean else PACKED_BOOL_FALSE
         return written + 4
 
     def write_signature(self, signature: str, type_: SignatureType) -> int:
@@ -44,24 +53,32 @@ class Marshaller:
         signature_len = len(signature_bytes)
         buf = self._buf
         buf.append(signature_len)
-        buf.extend(signature_bytes)
+        buf += signature_bytes
         buf.append(0)
         return signature_len + 2
 
     def write_string(self, value, type_: SignatureType) -> int:
+        return self._write_string(value)
+
+    def _write_string(self, value) -> int:
         value_bytes = value.encode()
         value_len = len(value)
         written = self._align(4) + 4
         buf = self._buf
-        buf.extend(PACK_UINT32(value_len))
-        buf.extend(value_bytes)
+        buf += PACK_UINT32(value_len)
+        buf += value_bytes
         written += value_len
         buf.append(0)
         written += 1
         return written
 
     def write_variant(self, variant: Variant, type_: SignatureType) -> int:
-        written = self._write_signature(variant.signature.encode())
+        return self._write_variant(variant, type_)
+
+    def _write_variant(self, variant: Variant, type_: SignatureType) -> int:
+        signature = variant.signature
+        signature_bytes = signature.encode()
+        written = self._write_signature(signature_bytes)
         written += self._write_single(variant.type, variant.value)
         return written
 
@@ -79,7 +96,7 @@ class Marshaller:
         buf = self._buf
         offset = len(buf)
         written += self._align(4) + 4
-        buf.extend(PACKED_UINT32_ZERO)
+        buf += PACKED_UINT32_ZERO
         child_type = type_.children[0]
         token = child_type.token
 
@@ -93,7 +110,7 @@ class Marshaller:
                 array_len += self.write_dict_entry([key, value], child_type)
         elif token == "y":
             array_len = len(array)
-            buf.extend(array)
+            buf += array
         elif token == "(":
             for value in array:
                 array_len += self._write_struct(value, child_type)
@@ -102,7 +119,7 @@ class Marshaller:
             if not writer:
                 for value in array:
                     array_len += self._align(size) + size
-                    buf.extend(packer(value))  # type: ignore[misc]
+                    buf += packer(value)  # type: ignore[misc]
             else:
                 for value in array:
                     array_len += writer(self, value, child_type)
@@ -130,14 +147,34 @@ class Marshaller:
 
     def _write_single(self, type_: SignatureType, body: Any) -> int:
         t = type_.token
-        writer, packer, size = self._writers[t]
-        if not writer:
-            written = self._align(size)
-            self._buf.extend(packer(body))  # type: ignore[misc]
-            return written + size
-        return writer(self, body, type_)
+        if t == "y":
+            self._buf.append(body)
+            return 1
+        elif t == "u":
+            written = self._align(4)
+            self._buf += PACK_UINT32(body)
+            return written + 4
+        elif t == "a":
+            return self._write_array(body, type_)
+        elif t == "s" or t == "o":
+            return self._write_string(body)
+        elif t == "v":
+            return self._write_variant(body, type_)
+        elif t == "b":
+            return self._write_boolean(body)
+        else:
+            writer, packer, size = self._writers[t]
+            if not writer:
+                written = self._align(size)
+                self._buf += packer(body)  # type: ignore[misc]
+                return written + size
+            return writer(self, body, type_)
 
     def marshall(self) -> bytearray:
+        """Marshalls the body into a byte array"""
+        return self._marshall()
+
+    def _marshall(self) -> bytearray:
         """Marshalls the body into a byte array"""
         try:
             self._construct_buffer()
@@ -149,26 +186,9 @@ class Marshaller:
 
     def _construct_buffer(self) -> None:
         self._buf.clear()
-        writers = self._writers
         body = self.body
-        buf = self._buf
         for i, type_ in enumerate(self.signature_tree.types):
-            t = type_.token
-            if t == "y":
-                buf.append(body[i])
-            elif t == "u":
-                self._align(4)
-                buf.extend(PACK_UINT32(body[i]))
-            elif t == "a":
-                self._write_array(body[i], type_)
-            else:
-                writer, packer, size = writers[t]
-                if not writer:
-                    if size != 1:
-                        self._align(size)
-                    buf.extend(packer(body[i]))  # type: ignore[misc]
-                else:
-                    writer(self, body[i], type_)
+            self._write_single(type_, body[i])
 
     _writers: Dict[
         str,
