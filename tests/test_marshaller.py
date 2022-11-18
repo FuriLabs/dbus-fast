@@ -1,8 +1,8 @@
 import io
 import json
 import os
+from enum import Enum
 from typing import Any, Dict
-from unittest.mock import patch
 
 import pytest
 
@@ -545,3 +545,45 @@ def test_unmarshall_large_message():
         "org.freedesktop.DBus.Introspectable": {},
         "org.freedesktop.DBus.Properties": {},
     }
+
+
+def test_unmarshall_big_endian_message():
+    """Test we can unmarshall a big endian message."""
+    msg = (
+        b"B\x01\x00\x01\x00\x00\x00 \x00\x00\x00\x00\x00\x00\x00\x82"
+        b"\x01\x01o\x00\x00\x00\x00\x01/\x00\x00\x00\x00\x00\x00\x00"
+        b'\x02\x01s\x00\x00\x00\x00"org.freedesktop.DBus.ObjectManag'
+        b"er\x00\x00\x00\x00\x00\x00\x03\x01s\x00\x00\x00\x00\x11GetManagedOb"
+        b"jects\x00\x00\x00\x00\x00\x00\x00\x06\x01s\x00\x00\x00\x00\torg."
+        b"bluez\x00\x00\x00\x00\x00\x00\x00\x08\x01g\x00\x04ussv\x00\x00\x00"
+        b"\x00\x00\x00\x00\x00\x00\x00*\x00\x00\x00\x03zip\x00"
+        b"\x00\x00\x00\x07Trusted\x00\x01b\x00\x00\x00\x00\x00\x01"
+    )
+
+    stream = io.BytesIO(msg)
+    unmarshaller = Unmarshaller(stream)
+    unmarshaller.unmarshall()
+    message = unmarshaller.message
+    unpacked = unpack_variants(message.body)
+    assert unpacked == [42, "zip", "Trusted", True]
+
+
+class RaucState(str, Enum):
+    """Rauc slot states."""
+
+    GOOD = "good"
+    BAD = "bad"
+    ACTIVE = "active"
+
+
+def test_marshalling_enum():
+    """Test marshalling an enum."""
+    msg = Message(
+        path="/test",
+        member="test",
+        signature="s",
+        body=[RaucState.GOOD],
+    )
+    marshalled = msg._marshall(False)
+    unmarshalled_msg = Unmarshaller(io.BytesIO(marshalled)).unmarshall()
+    assert unpack_variants(unmarshalled_msg.body)[0] == RaucState.GOOD.value

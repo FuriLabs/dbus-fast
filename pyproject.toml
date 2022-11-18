@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dbus-fast"
-version = "1.72.0"
+version = "1.75.0"
 description = "A faster version of dbus-next"
 authors = ["Bluetooth Devices Authors <bluetooth@koston.org>"]
 license = "MIT"
@@ -14,7 +14,7 @@ classifiers = [
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Libraries",
 ]
-build = "build.py"
+build = "build_ext.py"
 packages = [
     { include = "dbus_fast", from = "src" },
 ]
