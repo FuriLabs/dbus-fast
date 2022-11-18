@@ -2,6 +2,30 @@
 
 <!--next-version-placeholder-->
 
+## v1.75.0 (2022-11-17)
+### Feature
+* Add unmarshaller cython typing for SignatureType and SignatureTree ([#168](https://github.com/Bluetooth-Devices/dbus-fast/issues/168)) ([`98d5c5a`](https://github.com/Bluetooth-Devices/dbus-fast/commit/98d5c5aec2c800351666921c14aaa64741ca2831))
+
+## v1.74.2 (2022-11-17)
+### Fix
+* Small fixes for typing with older python versions ([#167](https://github.com/Bluetooth-Devices/dbus-fast/issues/167)) ([`1e32f28`](https://github.com/Bluetooth-Devices/dbus-fast/commit/1e32f284cd7a15da81d278ffa9f5abe34563aafc))
+
+## v1.74.1 (2022-11-16)
+### Fix
+* Building via PEP 517 ([#166](https://github.com/Bluetooth-Devices/dbus-fast/issues/166)) ([`6694fda`](https://github.com/Bluetooth-Devices/dbus-fast/commit/6694fda49f966814ebc900a52812b4c5e4ff1980))
+
+## v1.74.0 (2022-11-14)
+### Feature
+* Improve cdef types for marshaller ([#164](https://github.com/Bluetooth-Devices/dbus-fast/issues/164)) ([`9fb4440`](https://github.com/Bluetooth-Devices/dbus-fast/commit/9fb4440b805fa5bf432fa1b23d9b1fac1de31b96))
+
+## v1.73.1 (2022-11-14)
+### Fix
+* Allow non-string objects to be marshalled by write_string ([#163](https://github.com/Bluetooth-Devices/dbus-fast/issues/163)) ([`46f1d6b`](https://github.com/Bluetooth-Devices/dbus-fast/commit/46f1d6bbc09860185db04c7985b9fd7c23e7a1bf))
+
+## v1.73.0 (2022-11-11)
+### Feature
+* Reduce latency to process messages ([#161](https://github.com/Bluetooth-Devices/dbus-fast/issues/161)) ([`113f0c9`](https://github.com/Bluetooth-Devices/dbus-fast/commit/113f0c9a325d538592555ae89e1df1ea29398aa9))
+
 ## v1.72.0 (2022-11-04)
 ### Feature
 * Add optimized reader for GetManagedObjects ([#152](https://github.com/Bluetooth-Devices/dbus-fast/issues/152)) ([`7ed453f`](https://github.com/Bluetooth-Devices/dbus-fast/commit/7ed453f31a654f8cc9b99eb17f872370f4b06a4e))
