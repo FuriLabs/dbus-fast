@@ -1,3 +1,12 @@
+dbus-fast (1.75.0-2) unstable; urgency=medium
+
+  * Patch pyproject.toml to remove poetry group dependencies, not just the
+    poetry group dependencies headings. This avoids pulling in all the build
+    dependencies as run-time dependencies. (Closes: #1024243)
+  * Skip another failing test in autopkgtest.
+
+ -- Edward Betts <edward@4angle.com>  Sat, 19 Nov 2022 16:56:35 +0000
+
 dbus-fast (1.75.0-1) unstable; urgency=medium
 
   * New upstream release.

@@ -3,27 +3,48 @@ Date: Sat, 5 Nov 2022 11:48:51 +0000
 Subject: Remove poetry group dependencies
 
 ---
- pyproject.toml | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+ pyproject.toml | 30 +++++++++++++++---------------
+ 1 file changed, 15 insertions(+), 15 deletions(-)
 
 diff --git a/pyproject.toml b/pyproject.toml
-index 09554c3..c4919a6 100644
+index fcf2117..92b83c1 100644
 --- a/pyproject.toml
 +++ b/pyproject.toml
-@@ -28,14 +28,14 @@ python = "^3.7"
+@@ -28,22 +28,22 @@ python = "^3.7"
  async-timeout = {version = ">=3.0.0", python = "<3.11"}
  
  # duplicated in docs/requirements.txt for readthedocs compatibility
 -[tool.poetry.group.docs.dependencies]
-+# [tool.poetry.oup.docs.dependencies]
- myst-parser = "^0.18.0"
- sphinx = "^5.1.1"
- sphinx-rtd-theme = "^1.0.0"
- sphinxcontrib-asyncio = "^0.3.0"
- sphinxcontrib-fulltoc = "^1.2.0"
+-myst-parser = "^0.18.0"
+-sphinx = "^5.1.1"
+-sphinx-rtd-theme = "^1.0.0"
+-sphinxcontrib-asyncio = "^0.3.0"
+-sphinxcontrib-fulltoc = "^1.2.0"
++# [tool.poetry.group.docs.dependencies]
++# myst-parser = "^0.18.0"
++# sphinx = "^5.1.1"
++# sphinx-rtd-theme = "^1.0.0"
++# sphinxcontrib-asyncio = "^0.3.0"
++# sphinxcontrib-fulltoc = "^1.2.0"
  
 -[tool.poetry.group.dev.dependencies]
+-pytest = "^7.0"
+-pytest-cov = "^3.0"
+-pytest-asyncio = "^0.19.0"
+-pycairo = "^1.21.0"
+-PyGObject = "^3.42.2"
+-Cython = "^0.29.32"
+-setuptools = "^65.4.1"
+-pytest-timeout = "^2.1.0"
 +# [tool.poetry.group.dev.dependencies]
- pytest = "^7.0"
- pytest-cov = "^3.0"
- pytest-asyncio = "^0.19.0"
++# pytest = "^7.0"
++# pytest-cov = "^3.0"
++# pytest-asyncio = "^0.19.0"
++# pycairo = "^1.21.0"
++# PyGObject = "^3.42.2"
++# Cython = "^0.29.32"
++# setuptools = "^65.4.1"
++# pytest-timeout = "^2.1.0"
+ 
+ [tool.semantic_release]
+ branch = "main"
