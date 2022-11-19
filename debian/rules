@@ -2,9 +2,8 @@
 
 export PYBUILD_NAME=dbus-fast
 export PYBUILD_TEST_PYTEST=1
-export PYBUILD_TEST_ARGS=-k "not test_tcp_connection_with_forwarding and not test_glib_properties" --no-cov
+export PYBUILD_TEST_ARGS=-k "not test_tcp_connection_with_forwarding and not test_glib_properties and not test_sending_signals_between_buses" --no-cov
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
-export REQUIRE_CYTHON=1
 ifeq ($(shell lscpu | grep -q "Big Endian" && echo -n "big"),big)
 	export SKIP_CYTHON=1
 else
