@@ -27,6 +27,63 @@ from .validators import assert_bus_name_valid, assert_object_path_valid
 
 MESSAGE_TYPE_CALL = MessageType.METHOD_CALL
 MESSAGE_TYPE_SIGNAL = MessageType.SIGNAL
+NO_REPLY_EXPECTED_VALUE = MessageFlag.NO_REPLY_EXPECTED.value
+
+
+def _expects_reply(msg) -> bool:
+    return not (msg.flags.value & NO_REPLY_EXPECTED_VALUE)
+
+
+class SendReply:
+    """A context manager to send a reply to a message."""
+
+    __slots__ = ("_bus", "_msg")
+
+    def __init__(self, bus: "BaseMessageBus", msg: Message) -> None:
+        """Create a new reply context manager."""
+        self._bus = bus
+        self._msg = msg
+
+    def __enter__(self):
+        return self
+
+    def __call__(self, reply: Message) -> None:
+        if _expects_reply(self._msg):
+            self._bus.send(reply)
+
+    def _exit(
+        self,
+        exc_type: Optional[Type[Exception]],
+        exc_value: Optional[Exception],
+        tb: Optional[TracebackType],
+    ) -> bool:
+        if exc_type is None:
+            return False
+
+        if issubclass(exc_type, DBusError):
+            self(exc_value._as_message(self._msg))  # type: ignore[union-attr]
+            return True
+
+        if issubclass(exc_type, Exception):
+            self(
+                Message.new_error(
+                    self._msg,
+                    ErrorType.SERVICE_ERROR,
+                    f"The service interface raised an error: {exc_value}.\n{traceback.format_tb(tb)}",
+                )
+            )
+            return True
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[Exception]],
+        exc_value: Optional[Exception],
+        tb: Optional[TracebackType],
+    ) -> bool:
+        return self._exit(exc_type, exc_value, tb)
+
+    def send_error(self, exc: Exception) -> None:
+        self._exit(exc.__class__, exc, exc.__traceback__)
 
 
 class BaseMessageBus:
@@ -67,12 +124,17 @@ class BaseMessageBus:
         "_serial",
         "_user_message_handlers",
         "_name_owners",
+        "_path_exports",
         "_bus_address",
         "_name_owner_match_rule",
         "_match_rules",
         "_high_level_client_initialized",
         "_ProxyObject",
         "_machine_id",
+        "_negotiate_unix_fd",
+        "_sock",
+        "_stream",
+        "_fd",
     )
 
     def __init__(
@@ -80,9 +142,11 @@ class BaseMessageBus:
         bus_address: Optional[str] = None,
         bus_type: BusType = BusType.SESSION,
         ProxyObject: Optional[Type[BaseProxyObject]] = None,
+        negotiate_unix_fd: bool = False,
     ) -> None:
         self.unique_name: Optional[str] = None
         self._disconnected = False
+        self._negotiate_unix_fd = negotiate_unix_fd
 
         # True if the user disconnected himself, so don't throw errors out of
         # the main loop.
@@ -155,7 +219,7 @@ class BaseMessageBus:
                 )
 
         self._path_exports[path].append(interface)
-        ServiceInterface._add_bus(interface, self)
+        ServiceInterface._add_bus(interface, self, self._make_method_handler)
         self._emit_interface_added(path, interface)
 
     def unexport(
@@ -692,7 +756,7 @@ class BaseMessageBus:
                 self._name_owners[msg.destination] = reply.sender
             callback(reply, err)  # type: ignore[misc]
 
-        no_reply_expected = msg.flags & MessageFlag.NO_REPLY_EXPECTED
+        no_reply_expected = not _expects_reply(msg)
 
         # Make sure the return reply handler is installed
         # before sending the message to avoid a race condition
@@ -739,55 +803,6 @@ class BaseMessageBus:
             raise DBusError(
                 ErrorType.INTERNAL_ERROR, "invalid message type for method call", msg
             )
-
-    def _send_reply(self, msg: Message):
-        bus = self
-
-        class SendReply:
-            def __enter__(self) -> "SendReply":
-                return self
-
-            def __call__(self, reply: Message) -> None:
-                if msg.flags & MessageFlag.NO_REPLY_EXPECTED:
-                    return
-
-                bus.send(reply)
-
-            def _exit(
-                self,
-                exc_type: Optional[Type[Exception]],
-                exc_value: Optional[Exception],
-                tb: Optional[TracebackType],
-            ) -> bool:
-                if exc_type is None:
-                    return False
-
-                if issubclass(exc_type, DBusError):
-                    self(exc_value._as_message(msg))  # type: ignore[union-attr]
-                    return True
-
-                if issubclass(exc_type, Exception):
-                    self(
-                        Message.new_error(
-                            msg,
-                            ErrorType.SERVICE_ERROR,
-                            f"The service interface raised an error: {exc_value}.\n{traceback.format_tb(tb)}",
-                        )
-                    )
-                    return True
-
-            def __exit__(
-                self,
-                exc_type: Optional[Type[Exception]],
-                exc_value: Optional[Exception],
-                tb: Optional[TracebackType],
-            ) -> bool:
-                return self._exit(exc_type, exc_value, tb)
-
-            def send_error(self, exc: Exception) -> None:
-                self._exit(exc.__class__, exc, exc.__traceback__)
-
-        return SendReply()
 
     def _process_message(self, msg) -> None:
         handled = False
@@ -841,7 +856,7 @@ class BaseMessageBus:
             if not handled:
                 handler = self._find_message_handler(msg)
 
-                send_reply = self._send_reply(msg)
+                send_reply = SendReply(self, msg)
 
                 with send_reply:
                     if handler:
@@ -870,14 +885,25 @@ class BaseMessageBus:
             args = ServiceInterface._msg_body_to_args(msg)
             result = method.fn(interface, *args)
             body, fds = ServiceInterface._fn_result_to_body(
-                result, signature_tree=method.out_signature_tree
+                result,
+                signature_tree=method.out_signature_tree,
+                replace_fds=self._negotiate_unix_fd,
             )
-            send_reply(Message.new_method_return(msg, method.out_signature, body, fds))
+            send_reply(
+                Message(
+                    message_type=MessageType.METHOD_RETURN,
+                    reply_serial=msg.serial,
+                    destination=msg.sender,
+                    signature=method.out_signature,
+                    body=body,
+                    unix_fds=fds,
+                )
+            )
 
         return handler
 
     def _find_message_handler(
-        self, msg: Message
+        self, msg
     ) -> Optional[Callable[[Message, Callable], None]]:
         handler: Optional[Callable[[Message, Callable], None]] = None
 
@@ -912,7 +938,7 @@ class BaseMessageBus:
                         and msg.member == method.name
                         and msg.signature == method.in_signature
                     ):
-                        handler = self._make_method_handler(interface, method)
+                        handler = ServiceInterface._get_handler(interface, method, self)
                         break
                 if handler:
                     break
