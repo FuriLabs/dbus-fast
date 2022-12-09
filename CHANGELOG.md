@@ -2,6 +2,34 @@
 
 <!--next-version-placeholder-->
 
+## v1.82.0 (2022-12-09)
+### Feature
+* Avoid enum dunder overhead in message_bus calls ([#187](https://github.com/Bluetooth-Devices/dbus-fast/issues/187)) ([`b3c7d51`](https://github.com/Bluetooth-Devices/dbus-fast/commit/b3c7d5139d4cfa5bcea2435b6acdb6e1e059ceb4))
+
+## v1.81.0 (2022-12-09)
+### Feature
+* Speed up processing bluez passive advertisements ([#186](https://github.com/Bluetooth-Devices/dbus-fast/issues/186)) ([`fb0cc35`](https://github.com/Bluetooth-Devices/dbus-fast/commit/fb0cc3584888bd307db3eb689f0dd81a025a1396))
+
+## v1.80.0 (2022-12-09)
+### Feature
+* Speed up checking if a message needs a reply ([#181](https://github.com/Bluetooth-Devices/dbus-fast/issues/181)) ([`d1366ac`](https://github.com/Bluetooth-Devices/dbus-fast/commit/d1366aca644d78f446f47b8fd607b82f73299fb8))
+
+## v1.79.0 (2022-12-09)
+### Feature
+* Add a cython pxd for services ([#180](https://github.com/Bluetooth-Devices/dbus-fast/issues/180)) ([`f3c9250`](https://github.com/Bluetooth-Devices/dbus-fast/commit/f3c925079a1ea632ed850f71aaf26ba1e57f2ca8))
+
+## v1.78.0 (2022-12-08)
+### Feature
+* Simplify creation of SendReply in message_bus ([#178](https://github.com/Bluetooth-Devices/dbus-fast/issues/178)) ([`24faa00`](https://github.com/Bluetooth-Devices/dbus-fast/commit/24faa00062237cbee83ea118e4c11f319899538f))
+
+## v1.77.0 (2022-12-08)
+### Feature
+* Avoid replacing unix_fds if there are no unix_fds ([#176](https://github.com/Bluetooth-Devices/dbus-fast/issues/176)) ([`06647d7`](https://github.com/Bluetooth-Devices/dbus-fast/commit/06647d7e49aa29b40146c7655f0edd4979a5500d))
+
+## v1.76.0 (2022-12-08)
+### Feature
+* Only construct handlers once ([#175](https://github.com/Bluetooth-Devices/dbus-fast/issues/175)) ([`fb4d540`](https://github.com/Bluetooth-Devices/dbus-fast/commit/fb4d5402ba254e62989cbd0e36c3ad510bb0d358))
+
 ## v1.75.1 (2022-11-23)
 ### Fix
 * Fix remaining altdesktop links ([#169](https://github.com/Bluetooth-Devices/dbus-fast/issues/169)) ([`67255f7`](https://github.com/Bluetooth-Devices/dbus-fast/commit/67255f7e01f7970e4acdd57c9a399f9452fc1d0c))
