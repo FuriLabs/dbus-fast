@@ -1,3 +1,12 @@
+dbus-fast (1.83.1-2) unstable; urgency=medium
+
+  * Drop patch to remove poetry group dependencies from pyproject.toml.
+    The patch is no longer needed because poetry-core 1.3.2-3 has migrated
+    to testing.
+  * Update copyright year.
+
+ -- Edward Betts <edward@4angle.com>  Tue, 03 Jan 2023 16:23:34 +0000
+
 dbus-fast (1.83.1-1) unstable; urgency=medium
 
   * New upstream release.
