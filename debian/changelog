@@ -1,3 +1,10 @@
+dbus-fast (1.84.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Update Standards-Version.
+
+ -- Edward Betts <edward@4angle.com>  Mon, 16 Jan 2023 19:14:54 +0000
+
 dbus-fast (1.83.1-2) unstable; urgency=medium
 
   * Drop patch to remove poetry group dependencies from pyproject.toml.
