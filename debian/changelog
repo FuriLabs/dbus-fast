@@ -1,3 +1,13 @@
+dbus-fast (1.90.1-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Drop python3-async-timeout from Build-Depends and test Depends, no longer
+    required by upstream.
+  * Needs at least version 0.3.0-2 of python3-sphinxcontrib-asyncio to build
+    with the latest version of Sphinx. (Closes: #1042701)
+
+ -- Edward Betts <edward@4angle.com>  Thu, 03 Aug 2023 13:27:16 +0100
+
 dbus-fast (1.87.5-1) unstable; urgency=medium
 
   * New upstream release.
