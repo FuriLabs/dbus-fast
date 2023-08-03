@@ -2,6 +2,36 @@
 
 <!--next-version-placeholder-->
 
+## v1.90.1 (2023-08-02)
+
+### Fix
+
+* More cython3 optional fixes ([#219](https://github.com/Bluetooth-Devices/dbus-fast/issues/219)) ([`5b6cbc5`](https://github.com/Bluetooth-Devices/dbus-fast/commit/5b6cbc560e6add5a0f3f20fc9d37716cb30e9121))
+
+## v1.90.0 (2023-08-02)
+
+### Feature
+
+* Remove async_timeout dependency ([#218](https://github.com/Bluetooth-Devices/dbus-fast/issues/218)) ([`7826897`](https://github.com/Bluetooth-Devices/dbus-fast/commit/78268973591985695cb3fa76dd502bb1ef1895ec))
+
+## v1.89.0 (2023-08-02)
+
+### Feature
+
+* Speed up Message creation and callbacks ([#217](https://github.com/Bluetooth-Devices/dbus-fast/issues/217)) ([`04d6451`](https://github.com/Bluetooth-Devices/dbus-fast/commit/04d64511579be08c7d416664c66d527a7d6d12b6))
+
+## v1.88.0 (2023-08-02)
+
+### Feature
+
+* Optimize passive bluez message unmarshaller ([#216](https://github.com/Bluetooth-Devices/dbus-fast/issues/216)) ([`e0e87ec`](https://github.com/Bluetooth-Devices/dbus-fast/commit/e0e87ec16ce424dbae83114ca5da13406b913deb))
+
+## v1.87.6 (2023-08-01)
+
+### Fix
+
+* Exception handler failure when exception is not DBusError ([#215](https://github.com/Bluetooth-Devices/dbus-fast/issues/215)) ([`d771bcf`](https://github.com/Bluetooth-Devices/dbus-fast/commit/d771bcf6a2ed08486affe0e2c30bd8dd95ccbb5d))
+
 ## v1.87.5 (2023-07-28)
 
 ### Fix
