@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 
 class _Method:
-    def __init__(self, fn, name, disabled=False):
+    def __init__(self, fn, name: str, disabled=False):
         in_signature = ""
         out_signature = ""
 
@@ -490,9 +490,7 @@ class ServiceInterface:
 
     @staticmethod
     def _msg_body_to_args(msg: Message) -> List[Any]:
-        if not msg.unix_fds or not signature_contains_type(
-            msg.signature_tree, msg.body, "h"
-        ):
+        if not signature_contains_type(msg.signature_tree, msg.body, "h"):
             return msg.body
 
         # XXX: This deep copy could be expensive if messages are very
