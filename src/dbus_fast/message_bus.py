@@ -28,12 +28,33 @@ from .validators import assert_bus_name_valid, assert_object_path_valid
 MESSAGE_TYPE_CALL = MessageType.METHOD_CALL
 MESSAGE_TYPE_SIGNAL = MessageType.SIGNAL
 NO_REPLY_EXPECTED_VALUE = MessageFlag.NO_REPLY_EXPECTED.value
+_LOGGER = logging.getLogger(__name__)
+
 
 _Message = Message
 
 
 def _expects_reply(msg: _Message) -> bool:
+    """Whether a message expects a reply."""
     return not (msg.flags.value & NO_REPLY_EXPECTED_VALUE)
+
+
+def _block_unexpected_reply(reply: _Message) -> None:
+    """Block a reply if it's not expected.
+
+    Previously we silently ignored replies that were not expected, but this
+    lead to implementation errors that were hard to debug. Now we log a
+    debug message instead.
+    """
+    _LOGGER.debug(
+        "Blocked attempt to send a reply from handler "
+        "that received a message with flag "
+        "MessageFlag.NO_REPLY_EXPECTED: %s",
+        reply,
+    )
+
+
+BLOCK_UNEXPECTED_REPLY = _block_unexpected_reply
 
 
 class SendReply:
@@ -50,8 +71,7 @@ class SendReply:
         return self
 
     def __call__(self, reply: Message) -> None:
-        if _expects_reply(self._msg):
-            self._bus.send(reply)
+        self._bus.send(reply)
 
     def _exit(
         self,
@@ -673,11 +693,10 @@ class BaseMessageBus:
         children = set()
 
         for export_path in self._path_exports:
-            try:
-                child_path = export_path.split(path, maxsplit=1)[1]
-            except IndexError:
+            if not export_path.startswith(path):
                 continue
 
+            child_path = export_path.split(path, maxsplit=1)[1]
             child_path = child_path.lstrip("/")
             child_name = child_path.split("/", maxsplit=1)[0]
 
@@ -751,24 +770,27 @@ class BaseMessageBus:
         if not msg.serial:
             msg.serial = self.next_serial()
 
-        def reply_notify(reply: Optional[Message], err: Optional[Exception]) -> None:
-            if reply and msg.destination and reply.sender:
-                self._name_owners[msg.destination] = reply.sender
-            callback(reply, err)  # type: ignore[misc]
-
         no_reply_expected = not _expects_reply(msg)
-
         # Make sure the return reply handler is installed
         # before sending the message to avoid a race condition
         # where the reply is lost in case the backend can
         # send it right away.
         if not no_reply_expected:
-            self._method_return_handlers[msg.serial] = reply_notify
+
+            def _reply_notify(
+                reply: Optional[Message], err: Optional[Exception]
+            ) -> None:
+                """Callback on reply."""
+                if reply and msg.destination and reply.sender:
+                    self._name_owners[msg.destination] = reply.sender
+                callback(reply, err)
+
+            self._method_return_handlers[msg.serial] = _reply_notify
 
         self.send(msg)
 
         if no_reply_expected:
-            callback(None, None)  # type: ignore[misc]
+            callback(None, None)
 
     @staticmethod
     def _check_callback_type(callback: Callable) -> None:
@@ -855,9 +877,19 @@ class BaseMessageBus:
         if msg.message_type is MESSAGE_TYPE_CALL:
             if not handled:
                 handler = self._find_message_handler(msg)
+                if not _expects_reply(msg):
+                    if handler:
+                        handler(msg, BLOCK_UNEXPECTED_REPLY)
+                    else:
+                        _LOGGER.error(
+                            '"%s.%s" with signature "%s" could not be found',
+                            msg.interface,
+                            msg.member,
+                            msg.signature,
+                        )
+                    return
 
                 send_reply = SendReply(self, msg)
-
                 with send_reply:
                     if handler:
                         handler(msg, send_reply)
@@ -892,8 +924,13 @@ class BaseMessageBus:
         def _callback_method_handler(
             msg: Message, send_reply: Callable[[Message], None]
         ) -> None:
+            """This is the callback that will be called when a method call is."""
+            args = msg_body_to_args(msg) if msg.unix_fds else msg.body
+            result = method_fn(interface, *args)
+            if send_reply is BLOCK_UNEXPECTED_REPLY or not _expects_reply(msg):
+                return
             body, fds = fn_result_to_body(
-                method_fn(interface, *msg_body_to_args(msg)),
+                result,
                 signature_tree=out_signature_tree,
                 replace_fds=negotiate_unix_fd,
             )
@@ -911,8 +948,8 @@ class BaseMessageBus:
         return _callback_method_handler
 
     def _find_message_handler(
-        self, msg
-    ) -> Optional[Callable[[Message, Callable], None]]:
+        self, msg: _Message
+    ) -> Optional[Callable[[Message, Callable[[Message], None]], None]]:
         if (
             msg.interface == "org.freedesktop.DBus.Introspectable"
             and msg.member == "Introspect"
@@ -937,8 +974,12 @@ class BaseMessageBus:
 
         msg_path = msg.path
         if msg_path:
-            for interface in self._path_exports.get(msg_path, []):
-                for method in ServiceInterface._get_methods(interface):
+            interfaces = self._path_exports.get(msg_path)
+            if not interfaces:
+                return None
+            for interface in interfaces:
+                methods = ServiceInterface._get_methods(interface)
+                for method in methods:
                     if method.disabled:
                         continue
 

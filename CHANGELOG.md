@@ -2,6 +2,48 @@
 
 <!--next-version-placeholder-->
 
+## v1.92.0 (2023-08-18)
+
+### Feature
+
+* Reduce overhead to dispatch method handlers ([#227](https://github.com/Bluetooth-Devices/dbus-fast/issues/227)) ([`b222552`](https://github.com/Bluetooth-Devices/dbus-fast/commit/b2225527ae57d1bccec21df950d621797d30732d))
+
+## v1.91.4 (2023-08-17)
+
+### Fix
+
+* Subpath bad matching ([#202](https://github.com/Bluetooth-Devices/dbus-fast/issues/202)) ([`5d6f90b`](https://github.com/Bluetooth-Devices/dbus-fast/commit/5d6f90ba32c61b14368f80b91e1d3d9a6279126f))
+
+## v1.91.3 (2023-08-17)
+
+### Fix
+
+* Messages could be sent out of order if they had to queue ([#225](https://github.com/Bluetooth-Devices/dbus-fast/issues/225)) ([`4051cf2`](https://github.com/Bluetooth-Devices/dbus-fast/commit/4051cf283f61bbfefc4d63c8933b3818483a2d1a))
+
+## v1.91.2 (2023-08-09)
+
+### Fix
+
+* Avoid checking if a message expects a reply twice ([#223](https://github.com/Bluetooth-Devices/dbus-fast/issues/223)) ([`823e85f`](https://github.com/Bluetooth-Devices/dbus-fast/commit/823e85fddc44ceff60558d490013b601ae4bdacd))
+
+## v1.91.1 (2023-08-09)
+
+### Fix
+
+* Revert changes to _expects_reply from speed up to processing bluez passive data ([#222](https://github.com/Bluetooth-Devices/dbus-fast/issues/222)) ([`dfa9053`](https://github.com/Bluetooth-Devices/dbus-fast/commit/dfa9053a03692d3e14032c7d4a4a375400262c78))
+
+## v1.91.0 (2023-08-09)
+
+### Feature
+
+* Speed up to processing bluez passive data ([#221](https://github.com/Bluetooth-Devices/dbus-fast/issues/221)) ([`8e7432d`](https://github.com/Bluetooth-Devices/dbus-fast/commit/8e7432d31b38fecbbed585c2d5ae510d24ff5af7))
+
+## v1.90.2 (2023-08-05)
+
+### Fix
+
+* Spelling of `dbus_fast.auth.AuthAnnonymous` to `dbus_fast.auth.AuthAnonymous` ([#220](https://github.com/Bluetooth-Devices/dbus-fast/issues/220)) ([`6c2412f`](https://github.com/Bluetooth-Devices/dbus-fast/commit/6c2412f4ca214f1fc95046ab8118bf330aa646da))
+
 ## v1.90.1 (2023-08-02)
 
 ### Fix
