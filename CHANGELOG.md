@@ -2,6 +2,24 @@
 
 <!--next-version-placeholder-->
 
+## v1.94.0 (2023-08-24)
+
+### Feature
+
+* Build cpython 3.12 wheels ([#234](https://github.com/Bluetooth-Devices/dbus-fast/issues/234)) ([`b38aa58`](https://github.com/Bluetooth-Devices/dbus-fast/commit/b38aa58aa7b15cf4498edfefabf9a3df37804494))
+
+## v1.93.1 (2023-08-24)
+
+### Fix
+
+* Avoid cythonizing SendReply ([#232](https://github.com/Bluetooth-Devices/dbus-fast/issues/232)) ([`d12266d`](https://github.com/Bluetooth-Devices/dbus-fast/commit/d12266ddef920a6064c716c4e71ff8414094d0fd))
+
+## v1.93.0 (2023-08-21)
+
+### Feature
+
+* Improve performance of processing incoming messages ([#228](https://github.com/Bluetooth-Devices/dbus-fast/issues/228)) ([`ce61aea`](https://github.com/Bluetooth-Devices/dbus-fast/commit/ce61aea37a55c9498f1800ec4bd68e8eaf7c7f48))
+
 ## v1.92.0 (2023-08-18)
 
 ### Feature

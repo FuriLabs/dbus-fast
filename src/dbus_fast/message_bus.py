@@ -3,7 +3,6 @@ import logging
 import socket
 import traceback
 import xml.etree.ElementTree as ET
-from types import TracebackType
 from typing import Any, Callable, Dict, List, Optional, Type, Union
 
 from . import introspection as intr
@@ -21,6 +20,7 @@ from .constants import (
 from .errors import DBusError, InvalidAddressError
 from .message import Message
 from .proxy_object import BaseProxyObject
+from .send_reply import SendReply
 from .service import ServiceInterface, _Method
 from .signature import Variant
 from .validators import assert_bus_name_valid, assert_object_path_valid
@@ -55,55 +55,6 @@ def _block_unexpected_reply(reply: _Message) -> None:
 
 
 BLOCK_UNEXPECTED_REPLY = _block_unexpected_reply
-
-
-class SendReply:
-    """A context manager to send a reply to a message."""
-
-    __slots__ = ("_bus", "_msg")
-
-    def __init__(self, bus: "BaseMessageBus", msg: Message) -> None:
-        """Create a new reply context manager."""
-        self._bus = bus
-        self._msg = msg
-
-    def __enter__(self):
-        return self
-
-    def __call__(self, reply: Message) -> None:
-        self._bus.send(reply)
-
-    def _exit(
-        self,
-        exc_type: Optional[Type[Exception]],
-        exc_value: Optional[Exception],
-        tb: Optional[TracebackType],
-    ) -> bool:
-        if exc_value:
-            if isinstance(exc_value, DBusError):
-                self(exc_value._as_message(self._msg))
-            else:
-                self(
-                    Message.new_error(
-                        self._msg,
-                        ErrorType.SERVICE_ERROR,
-                        f"The service interface raised an error: {exc_value}.\n{traceback.format_tb(tb)}",
-                    )
-                )
-            return True
-
-        return False
-
-    def __exit__(
-        self,
-        exc_type: Optional[Type[Exception]],
-        exc_value: Optional[Exception],
-        tb: Optional[TracebackType],
-    ) -> bool:
-        return self._exit(exc_type, exc_value, tb)
-
-    def send_error(self, exc: Exception) -> None:
-        self._exit(exc.__class__, exc, exc.__traceback__)
 
 
 class BaseMessageBus:
@@ -770,7 +721,7 @@ class BaseMessageBus:
         if not msg.serial:
             msg.serial = self.next_serial()
 
-        no_reply_expected = not _expects_reply(msg)
+        no_reply_expected = _expects_reply(msg) is False
         # Make sure the return reply handler is installed
         # before sending the message to avoid a race condition
         # where the reply is lost in case the backend can
@@ -827,6 +778,7 @@ class BaseMessageBus:
             )
 
     def _process_message(self, msg: _Message) -> None:
+        """Process a message received from the message bus."""
         handled = False
         for user_handler in self._user_message_handlers:
             try:
@@ -842,13 +794,9 @@ class BaseMessageBus:
                     handled = True
                     break
                 else:
-                    logging.error(
-                        f"A message handler raised an exception: {e}.\n{traceback.format_exc()}"
-                    )
+                    logging.exception("A message handler raised an exception: %s", e)
             except Exception as e:
-                logging.error(
-                    f"A message handler raised an exception: {e}.\n{traceback.format_exc()}"
-                )
+                logging.exception("A message handler raised an exception: %s", e)
                 if msg.message_type is MESSAGE_TYPE_CALL:
                     self.send(
                         Message.new_error(
@@ -877,7 +825,7 @@ class BaseMessageBus:
         if msg.message_type is MESSAGE_TYPE_CALL:
             if not handled:
                 handler = self._find_message_handler(msg)
-                if not _expects_reply(msg):
+                if _expects_reply(msg) is False:
                     if handler:
                         handler(msg, BLOCK_UNEXPECTED_REPLY)
                     else:
@@ -898,15 +846,16 @@ class BaseMessageBus:
                             Message.new_error(
                                 msg,
                                 ErrorType.UNKNOWN_METHOD,
-                                f'{msg.interface}.{msg.member} with signature "{msg.signature}" could not be found',
+                                f"{msg.interface}.{msg.member} with signature "
+                                f'"{msg.signature}" could not be found',
                             )
                         )
             return
 
         # An ERROR or a METHOD_RETURN
-        if msg.reply_serial in self._method_return_handlers:
+        return_handler = self._method_return_handlers.get(msg.reply_serial)
+        if return_handler is not None:
             if not handled:
-                return_handler = self._method_return_handlers[msg.reply_serial]
                 return_handler(msg, None)
             del self._method_return_handlers[msg.reply_serial]
 
@@ -927,7 +876,7 @@ class BaseMessageBus:
             """This is the callback that will be called when a method call is."""
             args = msg_body_to_args(msg) if msg.unix_fds else msg.body
             result = method_fn(interface, *args)
-            if send_reply is BLOCK_UNEXPECTED_REPLY or not _expects_reply(msg):
+            if send_reply is BLOCK_UNEXPECTED_REPLY or _expects_reply(msg) is False:
                 return
             body, fds = fn_result_to_body(
                 result,
