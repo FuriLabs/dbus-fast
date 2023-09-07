@@ -2,6 +2,30 @@
 
 <!--next-version-placeholder-->
 
+## v1.95.2 (2023-09-07)
+
+### Fix
+
+* Handling of None messages from notify callback ([#236](https://github.com/Bluetooth-Devices/dbus-fast/issues/236)) ([`14f52f2`](https://github.com/Bluetooth-Devices/dbus-fast/commit/14f52f216d49fb52bf223d5d96306465bb61e49c))
+
+## v1.95.1 (2023-09-07)
+
+### Fix
+
+* Handle multiple flag bits when unmarshalling ([#241](https://github.com/Bluetooth-Devices/dbus-fast/issues/241)) ([`6f6f5f8`](https://github.com/Bluetooth-Devices/dbus-fast/commit/6f6f5f86c020866a0c1ef5573547e25c63c8d3c3))
+
+## v1.95.0 (2023-09-06)
+
+### Feature
+
+* Small speed up to the unmarshaller ([#238](https://github.com/Bluetooth-Devices/dbus-fast/issues/238)) ([`b8d0e9b`](https://github.com/Bluetooth-Devices/dbus-fast/commit/b8d0e9be4c7eb7c16347e7bf57f8bf40d0c293d0))
+
+## v1.94.1 (2023-08-27)
+
+### Fix
+
+* Rebuild wheels with cython 3.0.2 ([#235](https://github.com/Bluetooth-Devices/dbus-fast/issues/235)) ([`e8901a8`](https://github.com/Bluetooth-Devices/dbus-fast/commit/e8901a8f7d82a93ed2e72576859fde8f942a8889))
+
 ## v1.94.0 (2023-08-24)
 
 ### Feature

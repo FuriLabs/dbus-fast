@@ -11,6 +11,7 @@ cdef object ARRAY
 cdef object UNIX_FDS_CMSG_LENGTH
 cdef object SOL_SOCKET
 cdef object SCM_RIGHTS
+cdef object MESSAGE_FLAG_INTENUM
 
 cdef unsigned int UINT32_SIZE
 cdef unsigned int INT16_SIZE
@@ -112,8 +113,8 @@ cdef class Unmarshaller:
     cdef unsigned int _body_len
     cdef unsigned int _serial
     cdef unsigned int _header_len
-    cdef unsigned int _message_type
-    cdef unsigned int _flag
+    cdef object _message_type
+    cdef object _flag
     cdef unsigned int _msg_len
     cdef unsigned int _is_native
     cdef object _uint32_unpack
@@ -177,14 +178,14 @@ cdef class Unmarshaller:
     )
     cdef Variant _read_variant(self)
 
-    cpdef read_array(self, SignatureType type_)
-
     @cython.locals(
         beginning_pos=cython.ulong,
         array_length=cython.uint,
         child_type=SignatureType,
+        child_0=SignatureType,
+        child_1=SignatureType,
     )
-    cdef object _read_array(self, SignatureType type_)
+    cpdef object read_array(self, SignatureType type_)
 
     cpdef read_signature(self, SignatureType type_)
 
