@@ -16,7 +16,7 @@ endif
 
 override_dh_auto_clean:
 	dh_auto_clean
-	rm -rf dbus_fast.egg-info/ src/dbus_fast/*.c src/dbus_fast/*/*.c docs/_build
+	rm -rf dbus_fast.egg-info/ src/dbus_fast/*.c src/dbus_fast/*/*.c docs/_build setup.py
 
 override_dh_auto_test:
 	xvfb-run -a dbus-launch --exit-with-session dh_auto_test --no-parallel

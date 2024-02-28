@@ -3,7 +3,7 @@ Maintainer: Debian Python Team <team+python@tracker.debian.org>
 Uploaders: Edward Betts <edward@4angle.com>
 Section: python
 Priority: optional
-Build-Depends: cython3,
+Build-Depends: cython3 (>= 3.0.5),
                dbus-x11 <!nocheck>,
                debhelper-compat (= 13),
                dh-sequence-python3,

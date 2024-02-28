@@ -1,3 +1,12 @@
+dbus-fast (2.21.1-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Update copyright year.
+  * Add version requirement to cython3 Build-Depends, now required by
+    upstream.
+
+ -- Edward Betts <edward@4angle.com>  Wed, 28 Feb 2024 10:08:14 +0000
+
 dbus-fast (2.0.0-1) unstable; urgency=medium
 
   * New upstream release.
