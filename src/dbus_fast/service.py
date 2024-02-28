@@ -326,6 +326,35 @@ def dbus_property(
     return decorator
 
 
+def _real_fn_result_to_body(
+    result: Optional[Any],
+    signature_tree: SignatureTree,
+    replace_fds: bool,
+) -> Tuple[List[Any], List[int]]:
+    out_len = len(signature_tree.types)
+    if result is None:
+        final_result = []
+    else:
+        if out_len == 1:
+            final_result = [result]
+        else:
+            result_type = type(result)
+            if result_type is not list and result_type is not tuple:
+                raise SignatureBodyMismatchError(
+                    "Expected signal to return a list or tuple of arguments"
+                )
+            final_result = result
+
+    if out_len != len(final_result):
+        raise SignatureBodyMismatchError(
+            f"Signature and function return mismatch, expected {len(signature_tree.types)} arguments but got {len(result)}"
+        )
+
+    if not replace_fds:
+        return final_result, []
+    return replace_fds_with_idx(signature_tree, final_result)
+
+
 class ServiceInterface:
     """An abstract class that can be extended by the user to define DBus services.
 
@@ -343,7 +372,7 @@ class ServiceInterface:
     :vartype name: str
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         # TODO cannot be overridden by a dbus member
         self.name = name
         self.__methods: List[_Method] = []
@@ -456,6 +485,13 @@ class ServiceInterface:
         return interface.__methods
 
     @staticmethod
+    def _c_get_methods(interface: "ServiceInterface") -> List[_Method]:
+        # _c_get_methods is used by the C code to get the methods for an
+        # interface
+        # https://github.com/cython/cython/issues/3327
+        return interface.__methods
+
+    @staticmethod
     def _get_signals(interface: "ServiceInterface") -> List[_Signal]:
         return interface.__signals
 
@@ -467,6 +503,14 @@ class ServiceInterface:
     def _get_handler(
         interface: "ServiceInterface", method: _Method, bus: "BaseMessageBus"
     ) -> Callable[[Message, Callable[[Message], None]], None]:
+        return interface.__handlers[bus][method]
+
+    @staticmethod
+    def _c_get_handler(
+        interface: "ServiceInterface", method: _Method, bus: "BaseMessageBus"
+    ) -> Callable[[Message, Callable[[Message], None]], None]:
+        # _c_get_handler is used by the C code to get the handler for a method
+        # https://github.com/cython/cython/issues/3327
         return interface.__handlers[bus][method]
 
     @staticmethod
@@ -490,6 +534,11 @@ class ServiceInterface:
 
     @staticmethod
     def _msg_body_to_args(msg: Message) -> List[Any]:
+        return ServiceInterface._c_msg_body_to_args(msg)
+
+    @staticmethod
+    def _c_msg_body_to_args(msg: Message) -> List[Any]:
+        # https://github.com/cython/cython/issues/3327
         if not signature_contains_type(msg.signature_tree, msg.body, "h"):
             return msg.body
 
@@ -506,29 +555,19 @@ class ServiceInterface:
         signature_tree: SignatureTree,
         replace_fds: bool = True,
     ) -> Tuple[List[Any], List[int]]:
+        return _real_fn_result_to_body(result, signature_tree, replace_fds)
+
+    @staticmethod
+    def _c_fn_result_to_body(
+        result: Optional[Any],
+        signature_tree: SignatureTree,
+        replace_fds: bool,
+    ) -> Tuple[List[Any], List[int]]:
         """The high level interfaces may return single values which may be
         wrapped in a list to be a message body. Also they may return fds
         directly for type 'h' which need to be put into an external list."""
-        out_len = len(signature_tree.types)
-        if result is None:
-            result = []
-        else:
-            if out_len == 1:
-                result = [result]
-            else:
-                if type(result) is not list:
-                    raise SignatureBodyMismatchError(
-                        "Expected signal to return a list of arguments"
-                    )
-
-        if out_len != len(result):
-            raise SignatureBodyMismatchError(
-                f"Signature and function return mismatch, expected {len(signature_tree.types)} arguments but got {len(result)}"
-            )
-
-        if not replace_fds:
-            return result, []
-        return replace_fds_with_idx(signature_tree, result)
+        # https://github.com/cython/cython/issues/3327
+        return _real_fn_result_to_body(result, signature_tree, replace_fds)
 
     @staticmethod
     def _handle_signal(

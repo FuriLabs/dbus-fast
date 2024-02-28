@@ -3,6 +3,7 @@ import logging
 import socket
 import traceback
 import xml.etree.ElementTree as ET
+from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Type, Union
 
 from . import introspection as intr
@@ -28,6 +29,8 @@ from .validators import assert_bus_name_valid, assert_object_path_valid
 MESSAGE_TYPE_CALL = MessageType.METHOD_CALL
 MESSAGE_TYPE_SIGNAL = MessageType.SIGNAL
 NO_REPLY_EXPECTED_VALUE = MessageFlag.NO_REPLY_EXPECTED.value
+NO_REPLY_EXPECTED = MessageFlag.NO_REPLY_EXPECTED
+NONE = MessageFlag.NONE
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -36,7 +39,13 @@ _Message = Message
 
 def _expects_reply(msg: _Message) -> bool:
     """Whether a message expects a reply."""
-    return not (msg.flags.value & NO_REPLY_EXPECTED_VALUE)
+    if msg.flags is NO_REPLY_EXPECTED:
+        return False
+    if msg.flags is NONE:
+        return True
+    # Slow check for NO_REPLY_EXPECTED
+    flag_value = msg.flags.value
+    return not (flag_value & NO_REPLY_EXPECTED_VALUE)
 
 
 def _block_unexpected_reply(reply: _Message) -> None:
@@ -153,6 +162,9 @@ class BaseMessageBus:
 
         # machine id is lazy loaded
         self._machine_id: Optional[int] = None
+        self._sock: Optional[socket.socket] = None
+        self._fd: Optional[int] = None
+        self._stream: Optional[Any] = None
 
         self._setup_socket()
 
@@ -249,6 +261,7 @@ class BaseMessageBus:
         bus_name: str,
         path: str,
         callback: Callable[[Optional[intr.Node], Optional[Exception]], None],
+        check_callback_type: bool = True,
     ) -> None:
         """Get introspection data for the node at the given path from the given
         bus name.
@@ -268,7 +281,8 @@ class BaseMessageBus:
             - :class:`InvalidObjectPathError <dbus_fast.InvalidObjectPathError>` - If the given object path is not valid.
             - :class:`InvalidBusNameError <dbus_fast.InvalidBusNameError>` - If the given bus name is not valid.
         """
-        BaseMessageBus._check_callback_type(callback)
+        if check_callback_type:
+            BaseMessageBus._check_callback_type(callback)
 
         def reply_notify(reply: Optional[Message], err: Optional[Exception]) -> None:
             try:
@@ -367,6 +381,7 @@ class BaseMessageBus:
         callback: Optional[
             Callable[[Optional[RequestNameReply], Optional[Exception]], None]
         ] = None,
+        check_callback_type: bool = True,
     ) -> None:
         """Request that this message bus owns the given name.
 
@@ -383,7 +398,7 @@ class BaseMessageBus:
         """
         assert_bus_name_valid(name)
 
-        if callback is not None:
+        if callback is not None and check_callback_type:
             BaseMessageBus._check_callback_type(callback)
 
         if type(flags) is not NameFlag:
@@ -420,6 +435,7 @@ class BaseMessageBus:
         callback: Optional[
             Callable[[Optional[ReleaseNameReply], Optional[Exception]], None]
         ] = None,
+        check_callback_type: bool = True,
     ) -> None:
         """Request that this message bus release the given name.
 
@@ -435,7 +451,7 @@ class BaseMessageBus:
         """
         assert_bus_name_valid(name)
 
-        if callback is not None:
+        if callback is not None and check_callback_type:
             BaseMessageBus._check_callback_type(callback)
 
         message = Message(
@@ -587,7 +603,7 @@ class BaseMessageBus:
 
         self._method_return_handlers.clear()
 
-        for path in list(self._path_exports.keys()):
+        for path in list(self._path_exports):
             self.unexport(path)
 
         self._user_message_handlers.clear()
@@ -709,38 +725,39 @@ class BaseMessageBus:
         if err:
             raise err
 
+    def _reply_notify(
+        self,
+        msg: Message,
+        callback: Optional[Callable[[Optional[Message], Optional[Exception]], None]],
+        reply: Optional[Message],
+        err: Optional[Exception],
+    ) -> None:
+        """Callback on reply."""
+        if reply and msg.destination and reply.sender:
+            self._name_owners[msg.destination] = reply.sender
+        callback(reply, err)
+
     def _call(
         self,
         msg: Message,
         callback: Optional[Callable[[Optional[Message], Optional[Exception]], None]],
-        check_callback: bool = True,
     ) -> None:
-        if check_callback:
-            BaseMessageBus._check_callback_type(callback)
-
         if not msg.serial:
             msg.serial = self.next_serial()
 
-        no_reply_expected = _expects_reply(msg) is False
+        reply_expected = _expects_reply(msg)
         # Make sure the return reply handler is installed
         # before sending the message to avoid a race condition
         # where the reply is lost in case the backend can
         # send it right away.
-        if not no_reply_expected:
-
-            def _reply_notify(
-                reply: Optional[Message], err: Optional[Exception]
-            ) -> None:
-                """Callback on reply."""
-                if reply and msg.destination and reply.sender:
-                    self._name_owners[msg.destination] = reply.sender
-                callback(reply, err)
-
-            self._method_return_handlers[msg.serial] = _reply_notify
+        if reply_expected:
+            self._method_return_handlers[msg.serial] = partial(
+                self._reply_notify, msg, callback
+            )
 
         self.send(msg)
 
-        if no_reply_expected:
+        if not reply_expected:
             callback(None, None)
 
     @staticmethod
@@ -859,67 +876,64 @@ class BaseMessageBus:
                 return_handler(msg, None)
             del self._method_return_handlers[msg.reply_serial]
 
+    def _callback_method_handler(
+        self,
+        interface: ServiceInterface,
+        method: _Method,
+        msg: Message,
+        send_reply: Callable[[Message], None],
+    ) -> None:
+        """This is the callback that will be called when a method call is."""
+        args = ServiceInterface._c_msg_body_to_args(msg) if msg.unix_fds else msg.body
+        result = method.fn(interface, *args)
+        if send_reply is BLOCK_UNEXPECTED_REPLY or _expects_reply(msg) is False:
+            return
+        body, fds = ServiceInterface._c_fn_result_to_body(
+            result,
+            signature_tree=method.out_signature_tree,
+            replace_fds=self._negotiate_unix_fd,
+        )
+        send_reply(
+            Message(
+                message_type=MessageType.METHOD_RETURN,
+                reply_serial=msg.serial,
+                destination=msg.sender,
+                signature=method.out_signature,
+                body=body,
+                unix_fds=fds,
+            )
+        )
+
     def _make_method_handler(
         self, interface: ServiceInterface, method: _Method
     ) -> Callable[[Message, Callable[[Message], None]], None]:
-        method_fn = method.fn
-        out_signature_tree = method.out_signature_tree
-        negotiate_unix_fd = self._negotiate_unix_fd
-        out_signature = method.out_signature
-        message_type_method_return = MessageType.METHOD_RETURN
-        msg_body_to_args = ServiceInterface._msg_body_to_args
-        fn_result_to_body = ServiceInterface._fn_result_to_body
-
-        def _callback_method_handler(
-            msg: Message, send_reply: Callable[[Message], None]
-        ) -> None:
-            """This is the callback that will be called when a method call is."""
-            args = msg_body_to_args(msg) if msg.unix_fds else msg.body
-            result = method_fn(interface, *args)
-            if send_reply is BLOCK_UNEXPECTED_REPLY or _expects_reply(msg) is False:
-                return
-            body, fds = fn_result_to_body(
-                result,
-                signature_tree=out_signature_tree,
-                replace_fds=negotiate_unix_fd,
-            )
-            send_reply(
-                Message(
-                    message_type=message_type_method_return,
-                    reply_serial=msg.serial,
-                    destination=msg.sender,
-                    signature=out_signature,
-                    body=body,
-                    unix_fds=fds,
-                )
-            )
-
-        return _callback_method_handler
+        return partial(self._callback_method_handler, interface, method)
 
     def _find_message_handler(
         self, msg: _Message
     ) -> Optional[Callable[[Message, Callable[[Message], None]], None]]:
-        if (
-            msg.interface == "org.freedesktop.DBus.Introspectable"
-            and msg.member == "Introspect"
-            and msg.signature == ""
-        ):
-            return self._default_introspect_handler
+        if "org.freedesktop.DBus." in msg.interface:
+            if (
+                msg.interface == "org.freedesktop.DBus.Introspectable"
+                and msg.member == "Introspect"
+                and msg.signature == ""
+            ):
+                return self._default_introspect_handler
 
-        if msg.interface == "org.freedesktop.DBus.Properties":
-            return self._default_properties_handler
+            if msg.interface == "org.freedesktop.DBus.Properties":
+                return self._default_properties_handler
 
-        if msg.interface == "org.freedesktop.DBus.Peer":
-            if msg.member == "Ping" and msg.signature == "":
-                return self._default_ping_handler
-            elif msg.member == "GetMachineId" and msg.signature == "":
-                return self._default_get_machine_id_handler
+            if msg.interface == "org.freedesktop.DBus.Peer":
+                if msg.member == "Ping" and msg.signature == "":
+                    return self._default_ping_handler
+                elif msg.member == "GetMachineId" and msg.signature == "":
+                    return self._default_get_machine_id_handler
 
-        if (
-            msg.interface == "org.freedesktop.DBus.ObjectManager"
-            and msg.member == "GetManagedObjects"
-        ):
-            return self._default_get_managed_objects_handler
+            if (
+                msg.interface == "org.freedesktop.DBus.ObjectManager"
+                and msg.member == "GetManagedObjects"
+            ):
+                return self._default_get_managed_objects_handler
 
         msg_path = msg.path
         if msg_path:
@@ -927,7 +941,7 @@ class BaseMessageBus:
             if not interfaces:
                 return None
             for interface in interfaces:
-                methods = ServiceInterface._get_methods(interface)
+                methods = ServiceInterface._c_get_methods(interface)
                 for method in methods:
                     if method.disabled:
                         continue
@@ -937,7 +951,7 @@ class BaseMessageBus:
                         and msg.member == method.name
                         and msg.signature == method.in_signature
                     ):
-                        return ServiceInterface._get_handler(interface, method, self)
+                        return ServiceInterface._c_get_handler(interface, method, self)
 
         return None
 
@@ -982,7 +996,6 @@ class BaseMessageBus:
                 member="GetMachineId",
             ),
             reply_handler,
-            check_callback=False,
         )
 
     def _default_get_managed_objects_handler(
@@ -1209,7 +1222,6 @@ class BaseMessageBus:
                 body=[self._name_owner_match_rule],
             ),
             add_match_notify,
-            check_callback=False,
         )
 
     def _add_match_rule(self, match_rule):
@@ -1243,7 +1255,6 @@ class BaseMessageBus:
                 body=[match_rule],
             ),
             add_match_notify,
-            check_callback=False,
         )
 
     def _remove_match_rule(self, match_rule):
@@ -1282,5 +1293,4 @@ class BaseMessageBus:
                 body=[match_rule],
             ),
             remove_match_notify,
-            check_callback=False,
         )

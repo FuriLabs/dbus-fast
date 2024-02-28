@@ -24,16 +24,19 @@ class SignatureType:
     __slots__ = ("token", "children", "_signature")
 
     def __init__(self, token: str) -> None:
-        self.token = token
+        """Init a new SignatureType."""
+        self.token: str = token
         self.children: List[SignatureType] = []
         self._signature: Optional[str] = None
 
     def __eq__(self, other: Any) -> bool:
+        """Compare this type to another type or signature string."""
         if type(other) is SignatureType:
             return self.signature == other.signature
         return super().__eq__(other)
 
     def _collapse(self) -> str:
+        """Collapse this type into a signature string."""
         if self.token not in "a({":
             return self.token
 
@@ -255,10 +258,9 @@ class SignatureType:
                 child_type.verify(member)
 
     def _verify_struct(self, body: Any) -> None:
-        # TODO allow tuples
-        if not isinstance(body, list):
+        if not isinstance(body, (list, tuple)):
             raise SignatureBodyMismatchError(
-                f'DBus STRUCT type "(" must be Python type "list", got {type(body)}'
+                f'DBus STRUCT type "(" must be Python type "list" or "tuple", got {type(body)}'
             )
 
         if len(body) != len(self.children):
@@ -400,6 +402,14 @@ class Variant:
         verify: bool = True,
     ) -> None:
         """Init a new Variant."""
+        self._init_variant(signature, value, verify)
+
+    def _init_variant(
+        self,
+        signature: Union[str, SignatureTree, SignatureType],
+        value: Any,
+        verify: bool,
+    ) -> None:
         if type(signature) is SignatureTree:
             signature_tree = signature
             self.signature = signature_tree.signature
