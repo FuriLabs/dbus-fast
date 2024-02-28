@@ -28,6 +28,7 @@ def build(setup_kwargs):
                         "src/dbus_fast/service.py",
                         "src/dbus_fast/signature.py",
                         "src/dbus_fast/unpack.py",
+                        "src/dbus_fast/_private/address.py",
                         "src/dbus_fast/_private/marshaller.py",
                         "src/dbus_fast/_private/unmarshaller.py",
                     ],
@@ -36,6 +37,9 @@ def build(setup_kwargs):
                 cmdclass=dict(build_ext=BuildExt),
             )
         )
+        setup_kwargs["exclude_package_data"] = {
+            pkg: ["*.c"] for pkg in setup_kwargs["packages"]
+        }
     except Exception:
         if os.environ.get("REQUIRE_CYTHON"):
             raise

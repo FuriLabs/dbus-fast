@@ -2,6 +2,166 @@
 
 <!--next-version-placeholder-->
 
+## v2.21.1 (2024-01-16)
+
+### Fix
+
+* Avoid expensive runtime inspection of known callables ([#277](https://github.com/Bluetooth-Devices/dbus-fast/issues/277)) ([`0271825`](https://github.com/Bluetooth-Devices/dbus-fast/commit/0271825e7338dd8422975d9289768363b5b6b9de))
+
+## v2.21.0 (2023-12-12)
+
+### Feature
+
+* Speed up message callbacks ([#276](https://github.com/Bluetooth-Devices/dbus-fast/issues/276)) ([`2b8770b`](https://github.com/Bluetooth-Devices/dbus-fast/commit/2b8770b892ee75b851d5d58967e3a9e3149430dc))
+
+## v2.20.0 (2023-12-04)
+
+### Feature
+
+* Speed up run time constructed method handlers ([#275](https://github.com/Bluetooth-Devices/dbus-fast/issues/275)) ([`9f54fc3`](https://github.com/Bluetooth-Devices/dbus-fast/commit/9f54fc3194370bb4c6fd51c158b577adce1b517f))
+
+## v2.19.0 (2023-12-04)
+
+### Feature
+
+* Speed up ServiceInterface callbacks with cython methods ([#274](https://github.com/Bluetooth-Devices/dbus-fast/issues/274)) ([`0e57d79`](https://github.com/Bluetooth-Devices/dbus-fast/commit/0e57d798a2f171f804603cb5a3659de08092e74b))
+
+## v2.18.0 (2023-12-04)
+
+### Feature
+
+* Small speed up to the aio message reader ([#273](https://github.com/Bluetooth-Devices/dbus-fast/issues/273)) ([`8ee18a1`](https://github.com/Bluetooth-Devices/dbus-fast/commit/8ee18a1355b247e3ef9c7ad5f561d7cc8f9cf4a2))
+
+## v2.17.0 (2023-12-04)
+
+### Feature
+
+* Reduce duplicate code in aio MessageBus ([#272](https://github.com/Bluetooth-Devices/dbus-fast/issues/272)) ([`502ab0d`](https://github.com/Bluetooth-Devices/dbus-fast/commit/502ab0d47f667bb24cd7b3f1d8fa97e2d0345676))
+
+## v2.16.0 (2023-12-04)
+
+### Feature
+
+* Speed up sending messages with call on the MessageBus ([#271](https://github.com/Bluetooth-Devices/dbus-fast/issues/271)) ([`6d7f522`](https://github.com/Bluetooth-Devices/dbus-fast/commit/6d7f522e1cc5181e75209e4c00109426baa335fc))
+
+## v2.15.0 (2023-11-22)
+
+### Feature
+
+* Make ErrorType enums compare as strings ([#269](https://github.com/Bluetooth-Devices/dbus-fast/issues/269)) ([`c6a8301`](https://github.com/Bluetooth-Devices/dbus-fast/commit/c6a8301704162e1c4d07470c32ca0830f531b6d4))
+
+## v2.14.0 (2023-11-10)
+
+### Feature
+
+* Add support for tuples to the marshaller ([#267](https://github.com/Bluetooth-Devices/dbus-fast/issues/267)) ([`0ccb7c5`](https://github.com/Bluetooth-Devices/dbus-fast/commit/0ccb7c5d879fc787c12e35c659b0be88bcbed7fe))
+
+## v2.13.1 (2023-11-07)
+
+### Fix
+
+* Re-release since the previous release ran out of space on PyPI ([#266](https://github.com/Bluetooth-Devices/dbus-fast/issues/266)) ([`1586221`](https://github.com/Bluetooth-Devices/dbus-fast/commit/158622157f547aba80bbd06579915d7a5e145d58))
+
+## v2.13.0 (2023-11-07)
+
+### Feature
+
+* Improve marshaller performance ([#264](https://github.com/Bluetooth-Devices/dbus-fast/issues/264)) ([`5bdb161`](https://github.com/Bluetooth-Devices/dbus-fast/commit/5bdb161c0a70074e0466e9332dce9c27b497916b))
+
+## v2.12.1 (2023-11-07)
+
+### Fix
+
+* Send reply test failure with cython ([#265](https://github.com/Bluetooth-Devices/dbus-fast/issues/265)) ([`e634fc2`](https://github.com/Bluetooth-Devices/dbus-fast/commit/e634fc2c701c25353f805dbe5fe52f67fa896b7d))
+
+## v2.12.0 (2023-10-18)
+
+### Feature
+
+* Update for final cpython release ([#263](https://github.com/Bluetooth-Devices/dbus-fast/issues/263)) ([`460a072`](https://github.com/Bluetooth-Devices/dbus-fast/commit/460a072652793829b217720846fbf10f8e2ebadb))
+
+### Fix
+
+* Reduce size of wheels by excluding generated .c files ([#262](https://github.com/Bluetooth-Devices/dbus-fast/issues/262)) ([`dca4599`](https://github.com/Bluetooth-Devices/dbus-fast/commit/dca459900e19e7340b68601d13422c83a7d67a19))
+
+## v2.11.1 (2023-10-04)
+
+### Fix
+
+* Marshall multi-byte strings correctly ([#261](https://github.com/Bluetooth-Devices/dbus-fast/issues/261)) ([`4de31a3`](https://github.com/Bluetooth-Devices/dbus-fast/commit/4de31a36463ff8e2d85225973c4553c15623afb6))
+
+## v2.11.0 (2023-09-27)
+
+### Feature
+
+* Speed up unpacking arrays ([#257](https://github.com/Bluetooth-Devices/dbus-fast/issues/257)) ([`5c8bfe5`](https://github.com/Bluetooth-Devices/dbus-fast/commit/5c8bfe5e15a1c5de150975ebdaf1677801397555))
+
+## v2.10.0 (2023-09-25)
+
+### Feature
+
+* Speed up constructing Variant objects ([#256](https://github.com/Bluetooth-Devices/dbus-fast/issues/256)) ([`0d7a665`](https://github.com/Bluetooth-Devices/dbus-fast/commit/0d7a6652d797efcffaa0fa35039252c33522c15e))
+
+## v2.9.0 (2023-09-20)
+
+### Feature
+
+* Speed up unmarshalling message body ([#255](https://github.com/Bluetooth-Devices/dbus-fast/issues/255)) ([`5aed075`](https://github.com/Bluetooth-Devices/dbus-fast/commit/5aed07516611692f935cac6fb612204c6f419fec))
+
+## v2.8.0 (2023-09-20)
+
+### Feature
+
+* Speed up unmarshalling Variants ([#254](https://github.com/Bluetooth-Devices/dbus-fast/issues/254)) ([`dd74a84`](https://github.com/Bluetooth-Devices/dbus-fast/commit/dd74a8409db40abdaeba2fdcd578ae3998692470))
+
+## v2.7.0 (2023-09-13)
+
+### Feature
+
+* Speed up readers in the unmarshall path ([#253](https://github.com/Bluetooth-Devices/dbus-fast/issues/253)) ([`f9b61b8`](https://github.com/Bluetooth-Devices/dbus-fast/commit/f9b61b8bc734b0179bde2c08e46c02de65f27e50))
+
+## v2.6.0 (2023-09-12)
+
+### Feature
+
+* Speed up first connection when using asyncio ([#251](https://github.com/Bluetooth-Devices/dbus-fast/issues/251)) ([`0b6ba93`](https://github.com/Bluetooth-Devices/dbus-fast/commit/0b6ba93f733a78f1fb52ddfa24163de44f09df53))
+
+## v2.5.0 (2023-09-12)
+
+### Feature
+
+* Speed up unmarshaller ([#250](https://github.com/Bluetooth-Devices/dbus-fast/issues/250)) ([`e4cae13`](https://github.com/Bluetooth-Devices/dbus-fast/commit/e4cae13e1a25356437658a03ee60522a68a56d56))
+
+## v2.4.0 (2023-09-12)
+
+### Feature
+
+* Add cython typing for ServiceInterface.name ([#248](https://github.com/Bluetooth-Devices/dbus-fast/issues/248)) ([`98c7e75`](https://github.com/Bluetooth-Devices/dbus-fast/commit/98c7e753755741967bad0618f056605bc2eaa743))
+
+## v2.3.0 (2023-09-11)
+
+### Feature
+
+* Speed up connect and disconnect ([#247](https://github.com/Bluetooth-Devices/dbus-fast/issues/247)) ([`8f39ba3`](https://github.com/Bluetooth-Devices/dbus-fast/commit/8f39ba3ada1dfdec8d7230c77e52ef802e91b23d))
+
+## v2.2.0 (2023-09-10)
+
+### Feature
+
+* Speed up unmarshalling by skipping unused unix_fds header ([#246](https://github.com/Bluetooth-Devices/dbus-fast/issues/246)) ([`5f5a150`](https://github.com/Bluetooth-Devices/dbus-fast/commit/5f5a150ca01810bf3a2a90043f77ee7100c8242d))
+
+## v2.1.0 (2023-09-10)
+
+### Feature
+
+* Reduce overhead to reset between messages ([#245](https://github.com/Bluetooth-Devices/dbus-fast/issues/245)) ([`da30b04`](https://github.com/Bluetooth-Devices/dbus-fast/commit/da30b04a15aed08ba920fabd0abad372e953c394))
+
+## v2.0.1 (2023-09-08)
+
+### Fix
+
+* Clean up address parsing and tests ([#244](https://github.com/Bluetooth-Devices/dbus-fast/issues/244)) ([`370791d`](https://github.com/Bluetooth-Devices/dbus-fast/commit/370791da869040d4a0d92cde30c4d2d4d684bcdc))
+
 ## v2.0.0 (2023-09-07)
 
 ### Feature

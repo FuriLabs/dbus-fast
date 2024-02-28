@@ -603,3 +603,140 @@ def test_unmarshall_bluez_passive_message():
     assert "/org/bluez/hci0/dev_58_D3_49_E6_02_6E" in str(message)
     unpacked = unpack_variants(message.body)
     assert unpacked == ["/org/bluez/hci0/dev_58_D3_49_E6_02_6E"]
+
+
+def test_unmarshall_mount_message():
+    """Test we mount message unmarshall."""
+
+    mount_message = (
+        b"l\1\0\1\30\1\0\0\213\1\0\0\266\0\0\0\1\1o\0\31\0\0\0/org/freedesktop/systemd1"
+        b"\0\0\0\0\0\0\0\2\1s\0 \0\0\0org.freedesktop.systemd1.Manager\0\0\0\0\0\0\0\0"
+        b"\3\1s\0\22\0\0\0StartTransientUnit\0\0\0\0\0\0\6\1s\0\30\0\0\0org.freedesktop"
+        b".systemd1\0\0\0\0\0\0\0\0\10\1g\0\20ssa(sv)a(sa(sv))\0\0\0)\0\0\0mnt-data-sup"
+        b"ervisor-mounts-test1234.mount\0\0\0\4\0\0\0fail\0\0\0\0\314\0\0\0\7\0\0\0Opti"
+        b"ons\0\1s\0\0I\0\0\0noserverino,credentials=/mnt/data/supervisor/.mounts_crede"
+        b"ntials/test1234\0\0\0\4\0\0\0Type\0\1s\0\4\0\0\0cifs\0\0\0\0\v\0\0\0Descripti"
+        b"on\0\1s\0\0\37\0\0\0Supervisor cifs mount: test1234\0\4\0\0\0What\0\1s\0\v\0\0"
+        b"\0//\303\274ber/test\0\0\0\0\0\0\0\0\0\0\0\0"
+    )
+
+    stream = io.BytesIO(mount_message)
+    unmarshaller = Unmarshaller(stream)
+    unmarshaller.unmarshall()
+    message = unmarshaller.message
+    assert unmarshaller.message.signature == "ssa(sv)a(sa(sv))"
+    unpacked = unpack_variants(message.body)
+    assert unpacked == [
+        "mnt-data-supervisor-mounts-test1234.mount",
+        "fail",
+        [
+            [
+                "Options",
+                "noserverino,credentials=/mnt/data/supervisor/.mounts_credentials/test1234",
+            ],
+            ["Type", "cifs"],
+            ["Description", "Supervisor cifs mount: test1234"],
+            ["What", "//über/tes"],
+        ],
+        [],
+    ]
+
+
+def test_unmarshall_mount_message_2():
+    """Test we mount message unmarshall version 2."""
+
+    mount_message = (
+        b"l\1\0\1 \1\0\0+\6\0\0\266\0\0\0\1\1o\0\31\0\0\0/org/freedesktop/systemd1"
+        b"\0\0\0\0\0\0\0\2\1s\0 \0\0\0org.freedesktop.systemd1.Manager\0\0\0\0\0\0"
+        b"\0\0\3\1s\0\22\0\0\0StartTransientUnit\0\0\0\0\0\0\6\1s\0\30\0\0\0org.fr"
+        b"eedesktop.systemd1\0\0\0\0\0\0\0\0\10\1g\0\20ssa(sv)a(sa(sv))\0\0\0(\0\0"
+        b"\0mnt-data-supervisor-mounts-BadTest.mount\0\0\0\0\4\0\0\0fail\0\0\0\0\324"
+        b"\0\0\0\7\0\0\0Options\0\1s\0\0H\0\0\0noserverino,credentials=/mnt/data/su"
+        b"pervisor/.mounts_credentials/BadTest\0\0\0\0\4\0\0\0Type\0\1s\0\4\0\0\0cifs"
+        b"\0\0\0\0\v\0\0\0Description\0\1s\0\0\36\0\0\0Supervisor cifs mount: BadTest"
+        b"\0\0\4\0\0\0What\0\1s\0\23\0\0\0//doesntmatter/\303\274ber\0\0\0\0\0\0\0\0\0"
+        b"\0\0\0"
+    )
+
+    stream = io.BytesIO(mount_message)
+    unmarshaller = Unmarshaller(stream)
+    unmarshaller.unmarshall()
+    message = unmarshaller.message
+    assert unmarshaller.message.signature == "ssa(sv)a(sa(sv))"
+    unpacked = unpack_variants(message.body)
+    assert unpacked == [
+        "mnt-data-supervisor-mounts-BadTest.mount",
+        "fail",
+        [
+            [
+                "Options",
+                "noserverino,credentials=/mnt/data/supervisor/.mounts_credentials/BadTest",
+            ],
+            ["Type", "cifs"],
+            ["Description", "Supervisor cifs mount: BadTest"],
+            ["What", "//doesntmatter/übe"],
+        ],
+        [],
+    ]
+
+
+def test_unmarshall_multi_byte_string():
+    """Test unmarshall a multi-byte string."""
+
+    mount_message = (
+        b"l\x01\x00\x01\x1d\x00\x00\x00"
+        b"\x01\x00\x00\x00x\x00\x00\x00"
+        b"\x01\x01o\x00\x15\x00\x00\x00"
+        b"/org/fre"
+        b"edesktop"
+        b"/DBus\x00\x00\x00"
+        b"\x02\x01s\x00\x14\x00\x00\x00"
+        b"org.free"
+        b"desktop."
+        b"DBus\x00\x00\x00\x00"
+        b"\x03\x01s\x00\x05\x00\x00\x00"
+        b"Hello\x00\x00\x00"
+        b"\x06\x01s\x00\x14\x00\x00\x00"
+        b"org.free"
+        b"desktop."
+        b"DBus\x00\x00\x00\x00"
+        b"\x08\x01g\x00\x02as\x00"
+        b"\x19\x00\x00\x00\x14\x00\x00\x00"
+        b"//doesnt"
+        b"matter/\xc3"
+        b"\xbcber\x00"
+    )
+
+    stream = io.BytesIO(mount_message)
+    unmarshaller = Unmarshaller(stream)
+    unmarshaller.unmarshall()
+    message = unmarshaller.message
+    assert unmarshaller.message.signature == "as"
+    unpacked = unpack_variants(message.body)
+    assert unpacked == [["//doesntmatter/über"]]
+
+
+def test_marshalling_struct_accepts_tuples():
+    """Test marshalling a struct accepts tuples."""
+    msg = Message(
+        path="/test",
+        member="test",
+        signature="(s)",
+        body=[(RaucState.GOOD,)],
+    )
+    marshalled = msg._marshall(False)
+    unmarshalled_msg = Unmarshaller(io.BytesIO(marshalled)).unmarshall()
+    assert unpack_variants(unmarshalled_msg.body)[0] == [RaucState.GOOD.value]
+
+
+def test_marshalling_struct_accepts_lists():
+    """Test marshalling a struct accepts lists."""
+    msg = Message(
+        path="/test",
+        member="test",
+        signature="(s)",
+        body=[[RaucState.GOOD]],
+    )
+    marshalled = msg._marshall(False)
+    unmarshalled_msg = Unmarshaller(io.BytesIO(marshalled)).unmarshall()
+    assert unpack_variants(unmarshalled_msg.body)[0] == [RaucState.GOOD.value]

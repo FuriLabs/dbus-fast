@@ -4,6 +4,7 @@ import logging
 import socket
 from collections import deque
 from copy import copy
+from functools import partial
 from typing import Any, Callable, List, Optional, Set, Tuple
 
 from .. import introspection as intr
@@ -24,6 +25,19 @@ from .message_reader import build_message_reader
 from .proxy_object import ProxyObject
 
 NO_REPLY_EXPECTED_VALUE = MessageFlag.NO_REPLY_EXPECTED.value
+
+
+def _generate_hello_serialized(next_serial: int) -> bytes:
+    return Message(
+        destination="org.freedesktop.DBus",
+        path="/org/freedesktop/DBus",
+        interface="org.freedesktop.DBus",
+        member="Hello",
+        serial=next_serial,
+    )._marshall(False)
+
+
+HELLO_1_SERIALIZED = _generate_hello_serialized(1)
 
 
 def _future_set_exception(fut: asyncio.Future, exc: Exception) -> None:
@@ -234,18 +248,14 @@ class MessageBus(BaseMessageBus):
                 self.disconnect()
                 self._finalize(err)
 
-        hello_msg = Message(
-            destination="org.freedesktop.DBus",
-            path="/org/freedesktop/DBus",
-            interface="org.freedesktop.DBus",
-            member="Hello",
-            serial=self.next_serial(),
-        )
-
-        self._method_return_handlers[hello_msg.serial] = on_hello
-        self._stream.write(hello_msg._marshall(False))
+        next_serial = self.next_serial()
+        self._method_return_handlers[next_serial] = on_hello
+        if next_serial == 1:
+            serialized = HELLO_1_SERIALIZED
+        else:
+            serialized = _generate_hello_serialized(next_serial)
+        self._stream.write(serialized)
         self._stream.flush()
-
         return await future
 
     async def introspect(
@@ -279,13 +289,12 @@ class MessageBus(BaseMessageBus):
         """
         future = self._loop.create_future()
 
-        def reply_handler(reply: Any, err: Exception) -> None:
-            if err:
-                _future_set_exception(future, err)
-            else:
-                _future_set_result(future, reply)
-
-        super().introspect(bus_name, path, reply_handler)
+        super().introspect(
+            bus_name,
+            path,
+            partial(self._reply_handler, future),
+            check_callback_type=False,
+        )
 
         timer_handle = self._loop.call_later(
             timeout, _future_set_exception, future, asyncio.TimeoutError
@@ -317,13 +326,9 @@ class MessageBus(BaseMessageBus):
         """
         future = self._loop.create_future()
 
-        def reply_handler(reply, err):
-            if err:
-                _future_set_exception(future, err)
-            else:
-                _future_set_result(future, reply)
-
-        super().request_name(name, flags, reply_handler)
+        super().request_name(
+            name, flags, partial(self._reply_handler, future), check_callback_type=False
+        )
 
         return await future
 
@@ -345,13 +350,9 @@ class MessageBus(BaseMessageBus):
         """
         future = self._loop.create_future()
 
-        def reply_handler(reply, err):
-            if err:
-                _future_set_exception(future, err)
-            else:
-                _future_set_result(future, reply)
-
-        super().release_name(name, reply_handler)
+        super().release_name(
+            name, partial(self._reply_handler, future), check_callback_type=False
+        )
 
         return await future
 
@@ -378,14 +379,7 @@ class MessageBus(BaseMessageBus):
 
         future = self._loop.create_future()
 
-        def reply_handler(reply, err):
-            if not future.done():
-                if err:
-                    _future_set_exception(future, err)
-                else:
-                    _future_set_result(future, reply)
-
-        self._call(msg, reply_handler, check_callback=False)
+        self._call(msg, partial(self._reply_handler, future))
 
         await future
 
@@ -537,3 +531,12 @@ class MessageBus(BaseMessageBus):
             _future_set_exception(self._disconnect_future, err)
         else:
             _future_set_result(self._disconnect_future, None)
+
+    def _reply_handler(
+        self, future: asyncio.Future, reply: Optional[Any], err: Optional[Exception]
+    ) -> None:
+        """The reply handler for method calls."""
+        if err:
+            _future_set_exception(future, err)
+        else:
+            _future_set_result(future, reply)
