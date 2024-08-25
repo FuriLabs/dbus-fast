@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dbus-fast"
-version = "2.22.1"
+version = "2.23.0"
 description = "A faster version of dbus-next"
 authors = ["Bluetooth Devices Authors <bluetooth@koston.org>"]
 license = "MIT"
@@ -13,6 +13,11 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Libraries",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 packages = [
     { include = "dbus_fast", from = "src" },
@@ -40,11 +45,11 @@ sphinxcontrib-fulltoc = "^1.2.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0"
 pytest-cov = "^3.0"
-pytest-asyncio = "^0.19.0"
+pytest-asyncio = ">=0.19,<0.24"
 pycairo = "^1.21.0"
 PyGObject = "^3.42.2"
-Cython = "^0.29.32"
-setuptools = "^65.4.1"
+Cython = ">=0.29.32,<3.1.0"
+setuptools = ">=65.4.1,<74.0.0"
 pytest-timeout = "^2.1.0"
 
 [tool.semantic_release]
