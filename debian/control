@@ -1,26 +1,28 @@
 Source: dbus-fast
 Maintainer: Debian Python Team <team+python@tracker.debian.org>
-Uploaders: Edward Betts <edward@4angle.com>
+Uploaders:
+ Edward Betts <edward@4angle.com>,
 Section: python
 Priority: optional
-Build-Depends: cython3 (>= 3.0.5),
-               dbus-x11 <!nocheck>,
-               debhelper-compat (= 13),
-               dh-sequence-python3,
-               dh-sequence-sphinxdoc,
-               pybuild-plugin-pyproject,
-               python3-all,
-               python3-all-dev,
-               python3-poetry-core,
-               python3-pytest <!nocheck>,
-               python3-pytest-asyncio <!nocheck>,
-               python3-pytest-cov <!nocheck>,
-               python3-setuptools,
-               python3-sphinx,
-               python3-sphinx-rtd-theme,
-               python3-sphinxcontrib-asyncio (>= 0.3.0-2),
-               xauth <!nocheck>,
-               xvfb <!nocheck>
+Build-Depends:
+ cython3 (>= 3.0.5),
+ dbus-x11 <!nocheck>,
+ debhelper-compat (= 13),
+ dh-sequence-python3,
+ dh-sequence-sphinxdoc,
+ pybuild-plugin-pyproject,
+ python3-all,
+ python3-all-dev,
+ python3-poetry-core,
+ python3-pytest <!nocheck>,
+ python3-pytest-asyncio <!nocheck>,
+ python3-pytest-cov <!nocheck>,
+ python3-setuptools,
+ python3-sphinx,
+ python3-sphinx-rtd-theme,
+ python3-sphinxcontrib-asyncio (>= 0.3.0-2),
+ xauth <!nocheck>,
+ xvfb <!nocheck>,
 Rules-Requires-Root: no
 Standards-Version: 4.7.0
 Homepage: https://github.com/bluetooth-devices/dbus-fast
@@ -29,11 +31,13 @@ Vcs-Git: https://salsa.debian.org/python-team/packages/dbus-fast.git
 
 Package: python3-dbus-fast
 Architecture: any
-Depends: ${misc:Depends},
-         ${python3:Depends},
-         ${shlibs:Depends},
-         ${sphinxdoc:Depends}
-Built-Using: ${sphinxdoc:Built-Using}
+Depends:
+ ${misc:Depends},
+ ${python3:Depends},
+ ${shlibs:Depends},
+ ${sphinxdoc:Depends},
+Built-Using:
+ ${sphinxdoc:Built-Using},
 Description: Faster version of dbus-next
  dbus-fast is a Python library for DBus that aims to be a performant fully
  featured high level library primarily geared towards integration of
