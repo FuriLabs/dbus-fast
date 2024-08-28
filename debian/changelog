@@ -1,3 +1,11 @@
+dbus-fast (2.23.0-2) unstable; urgency=medium
+
+  * Switch build-depends from dbus-x11 to dbus. Thanks to Simon McVittie for
+    the patch. (Closes: #1079701)
+  * No need to skip any tests now.
+
+ -- Edward Betts <edward@4angle.com>  Mon, 26 Aug 2024 17:06:16 +0100
+
 dbus-fast (2.23.0-1) unstable; urgency=medium
 
   * New upstream release.

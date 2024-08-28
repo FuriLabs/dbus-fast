@@ -2,7 +2,7 @@
 
 export PYBUILD_NAME=dbus-fast
 export PYBUILD_TEST_PYTEST=1
-export PYBUILD_TEST_ARGS=-k "not test_tcp_connection_with_forwarding and not test_glib_properties and not test_sending_signals_between_buses" --no-cov
+export PYBUILD_TEST_ARGS=--no-cov
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
 ifeq ($(shell lscpu | grep -q "Big Endian" && echo -n "big"),big)
 	export SKIP_CYTHON=1
@@ -19,7 +19,7 @@ override_dh_auto_clean:
 	rm -rf dbus_fast.egg-info/ src/dbus_fast/*.c src/dbus_fast/*/*.c docs/_build setup.py
 
 override_dh_auto_test:
-	xvfb-run -a dbus-launch --exit-with-session dh_auto_test --no-parallel
+	xvfb-run -a dbus-run-session -- dh_auto_test --no-parallel
 
 override_dh_auto_build:
 	dh_auto_build $@ --buildsystem=pybuild

@@ -6,7 +6,7 @@ Section: python
 Priority: optional
 Build-Depends:
  cython3 (>= 3.0.5),
- dbus-x11 <!nocheck>,
+ dbus <!nocheck>,
  debhelper-compat (= 13),
  dh-sequence-python3,
  dh-sequence-sphinxdoc,

@@ -1,6 +1,6 @@
 Tests: run-tests
 Depends:
- dbus-x11,
+ dbus,
  python3-all,
  python3-poetry-core,
  python3-pytest,
