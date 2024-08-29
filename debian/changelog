@@ -1,3 +1,9 @@
+dbus-fast (2.24.0-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Edward Betts <edward@4angle.com>  Thu, 29 Aug 2024 06:20:36 +0100
+
 dbus-fast (2.23.0-2) unstable; urgency=medium
 
   * Switch build-depends from dbus-x11 to dbus. Thanks to Simon McVittie for
