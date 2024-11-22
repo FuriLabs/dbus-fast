@@ -174,7 +174,7 @@ class BaseMessageBus:
             return False
         return True
 
-    def export(self, path: str, interface: ServiceInterface) -> None:
+    def export(self, path: str, interface: ServiceInterface, parent_path=None) -> None:
         """Export the service interface on this message bus to make it available
         to other clients.
 
@@ -203,7 +203,7 @@ class BaseMessageBus:
 
         self._path_exports[path].append(interface)
         ServiceInterface._add_bus(interface, self, self._make_method_handler)
-        self._emit_interface_added(path, interface)
+        self._emit_interface_added(path, interface, parent_path)
 
     def unexport(
         self, path: str, interface: Optional[Union[ServiceInterface, str]] = None
@@ -304,7 +304,7 @@ class BaseMessageBus:
             reply_notify,
         )
 
-    def _emit_interface_added(self, path: str, interface: ServiceInterface) -> None:
+    def _emit_interface_added(self, path: str, interface: ServiceInterface, parent_path=None) -> None:
         """Emit the ``org.freedesktop.DBus.ObjectManager.InterfacesAdded`` signal.
 
         This signal is intended to be used to alert clients when
@@ -340,7 +340,7 @@ class BaseMessageBus:
 
             self.send(
                 Message.new_signal(
-                    path=path,
+                    path=parent_path or path,
                     interface="org.freedesktop.DBus.ObjectManager",
                     member="InterfacesAdded",
                     signature="oa{sa{sv}}",
