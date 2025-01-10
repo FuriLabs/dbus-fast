@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union
 
 from ._private.constants import LITTLE_ENDIAN, PROTOCOL_VERSION, HeaderField
 from ._private.marshaller import Marshaller
@@ -32,6 +32,14 @@ MESSAGE_FLAG = MessageFlag
 
 MESSAGE_FLAG_NONE = MessageFlag.NONE
 MESSAGE_TYPE_METHOD_CALL = MessageType.METHOD_CALL
+
+
+_int = int
+_str = str
+_bool = bool
+_MessageType = MessageType
+_MessageFlag = MessageFlag
+_list = list
 
 
 class Message:
@@ -107,34 +115,64 @@ class Message:
         message_type: MessageType = MESSAGE_TYPE_METHOD_CALL,
         flags: Union[MessageFlag, int] = MESSAGE_FLAG_NONE,
         error_name: Optional[Union[str, ErrorType]] = None,
-        reply_serial: int = 0,
+        reply_serial: Optional[int] = None,
         sender: Optional[str] = None,
-        unix_fds: List[int] = [],
+        unix_fds: list[int] = [],
         signature: Optional[Union[SignatureTree, str]] = None,
-        body: List[Any] = [],
-        serial: int = 0,
+        body: list[Any] = [],
+        serial: Optional[int] = None,
         validate: bool = True,
+    ) -> None:
+        self._fast_init(
+            destination,
+            path,
+            interface,
+            member,
+            message_type,
+            flags if type(flags) is MESSAGE_FLAG else MESSAGE_FLAG(flags),
+            str(error_name.value) if type(error_name) is ErrorType else error_name,
+            reply_serial or 0,
+            sender,
+            unix_fds,
+            signature
+            if type(signature) is SignatureTree
+            else get_signature_tree(signature or ""),
+            body,
+            serial or 0,
+            validate,
+        )
+
+    def _fast_init(
+        self,
+        destination: Optional[_str],
+        path: Optional[_str],
+        interface: Optional[_str],
+        member: Optional[_str],
+        message_type: _MessageType,
+        flags: _MessageFlag,
+        error_name: Optional[_str],
+        reply_serial: _int,
+        sender: _str,
+        unix_fds: _list[int],
+        signature_tree: SignatureTree,
+        body: _list[Any],
+        serial: _int,
+        validate: _bool,
     ) -> None:
         self.destination = destination
         self.path = path
         self.interface = interface
         self.member = member
         self.message_type = message_type
-        self.flags = flags if type(flags) is MESSAGE_FLAG else MESSAGE_FLAG(flags)
-        self.error_name = (
-            str(error_name.value) if type(error_name) is ErrorType else error_name
-        )
-        self.reply_serial = reply_serial or 0
+        self.flags = flags
+        self.error_name = error_name
+        self.reply_serial = reply_serial
         self.sender = sender
         self.unix_fds = unix_fds
-        if type(signature) is SignatureTree:
-            self.signature = signature.signature
-            self.signature_tree = signature
-        else:
-            self.signature = signature or ""  # type: ignore[assignment]
-            self.signature_tree = get_signature_tree(signature or "")
+        self.signature = signature_tree.signature
+        self.signature_tree = signature_tree
         self.body = body
-        self.serial = serial or 0
+        self.serial = serial
 
         if not validate:
             return
@@ -203,8 +241,8 @@ class Message:
     def new_method_return(
         msg: "Message",
         signature: str = "",
-        body: List[Any] = [],
-        unix_fds: List[int] = [],
+        body: list[Any] = [],
+        unix_fds: list[int] = [],
     ) -> "Message":
         """A convenience constructor to create a method return to the given method call message.
 
@@ -238,8 +276,8 @@ class Message:
         interface: str,
         member: str,
         signature: str = "",
-        body: Optional[List[Any]] = None,
-        unix_fds: Optional[List[int]] = None,
+        body: Optional[list[Any]] = None,
+        unix_fds: Optional[list[int]] = None,
     ) -> "Message":
         """A convenience constructor to create a new signal message.
 
@@ -287,21 +325,37 @@ class Message:
         # Variant is invalid.
 
         if self.path:
-            fields.append([HEADER_PATH, Variant("o", self.path, False)])
+            var = Variant.__new__(Variant)
+            var._init_variant("o", self.path, False)
+            fields.append((HEADER_PATH, var))
         if self.interface:
-            fields.append([HEADER_INTERFACE, Variant("s", self.interface, False)])
+            var = Variant.__new__(Variant)
+            var._init_variant("s", self.interface, False)
+            fields.append((HEADER_INTERFACE, var))
         if self.member:
-            fields.append([HEADER_MEMBER, Variant("s", self.member, False)])
+            var = Variant.__new__(Variant)
+            var._init_variant("s", self.member, False)
+            fields.append((HEADER_MEMBER, var))
         if self.error_name:
-            fields.append([HEADER_ERROR_NAME, Variant("s", self.error_name, False)])
+            var = Variant.__new__(Variant)
+            var._init_variant("s", self.error_name, False)
+            fields.append((HEADER_ERROR_NAME, var))
         if self.reply_serial:
-            fields.append([HEADER_REPLY_SERIAL, Variant("u", self.reply_serial, False)])
+            var = Variant.__new__(Variant)
+            var._init_variant("u", self.reply_serial, False)
+            fields.append((HEADER_REPLY_SERIAL, var))
         if self.destination:
-            fields.append([HEADER_DESTINATION, Variant("s", self.destination, False)])
+            var = Variant.__new__(Variant)
+            var._init_variant("s", self.destination, False)
+            fields.append((HEADER_DESTINATION, var))
         if self.signature:
-            fields.append([HEADER_SIGNATURE, Variant("g", self.signature, False)])
+            var = Variant.__new__(Variant)
+            var._init_variant("g", self.signature, False)
+            fields.append((HEADER_SIGNATURE, var))
         if self.unix_fds and negotiate_unix_fd:
-            fields.append([HEADER_UNIX_FDS, Variant("u", len(self.unix_fds), False)])
+            var = Variant.__new__(Variant)
+            var._init_variant("u", len(self.unix_fds), False)
+            fields.append((HEADER_UNIX_FDS, var))
 
         header_body = [
             LITTLE_ENDIAN,

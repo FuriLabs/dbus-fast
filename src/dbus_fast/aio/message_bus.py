@@ -6,7 +6,7 @@ import socket
 from collections import deque
 from copy import copy
 from functools import partial
-from typing import Any, Callable, List, Optional, Set, Tuple
+from typing import Any, Callable, Optional
 
 from .. import introspection as intr
 from ..auth import Authenticator, AuthExternal
@@ -21,7 +21,7 @@ from ..constants import (
 from ..errors import AuthError
 from ..message import Message
 from ..message_bus import BaseMessageBus, _block_unexpected_reply
-from ..service import ServiceInterface
+from ..service import ServiceInterface, _Method
 from .message_reader import build_message_reader
 from .proxy_object import ProxyObject
 
@@ -57,7 +57,7 @@ class _MessageWriter:
     def __init__(self, bus: "MessageBus") -> None:
         """A class to handle writing messages to the message bus."""
         self.messages: deque[
-            Tuple[bytearray, Optional[List[int]], Optional[asyncio.Future]]
+            tuple[bytearray, Optional[list[int]], Optional[asyncio.Future]]
         ] = deque()
         self.negotiate_unix_fd = bus._negotiate_unix_fd
         self.bus = bus
@@ -66,7 +66,7 @@ class _MessageWriter:
         self.buf: Optional[memoryview] = None
         self.fd = bus._fd
         self.offset = 0
-        self.unix_fds: Optional[List[int]] = None
+        self.unix_fds: Optional[list[int]] = None
         self.fut: Optional[asyncio.Future] = None
 
     def write_callback(self, remove_writer: bool = True) -> None:
@@ -208,7 +208,7 @@ class MessageBus(BaseMessageBus):
             self._auth = auth
 
         self._disconnect_future = self._loop.create_future()
-        self._pending_futures: Set[asyncio.Future] = set()
+        self._pending_futures: set[asyncio.Future] = set()
 
     async def connect(self) -> "MessageBus":
         """Connect this message bus to the DBus daemon.
@@ -423,7 +423,19 @@ class MessageBus(BaseMessageBus):
         """
         return await self._disconnect_future
 
-    def _make_method_handler(self, interface, method):
+    def _future_exception_no_reply(self, fut: asyncio.Future) -> None:
+        """Log an exception from a future that was not expected."""
+        self._pending_futures.discard(fut)
+        try:
+            fut.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logging.error("unexpected exception in future", exc_info=e)
+
+    def _make_method_handler(
+        self, interface: "ServiceInterface", method: "_Method"
+    ) -> Callable[[Message, Callable[[Message], None]], None]:
         if not asyncio.iscoroutinefunction(method.fn):
             return super()._make_method_handler(interface, method)
 
@@ -436,7 +448,7 @@ class MessageBus(BaseMessageBus):
         ) -> None:
             """A coroutine method handler."""
             args = msg_body_to_args(msg) if msg.unix_fds else msg.body
-            fut = asyncio.ensure_future(method.fn(interface, *args))
+            fut: asyncio.Future = asyncio.ensure_future(method.fn(interface, *args))
             # Hold a strong reference to the future to ensure
             # it is not garbage collected before it is done.
             self._pending_futures.add(fut)
@@ -444,7 +456,7 @@ class MessageBus(BaseMessageBus):
                 send_reply is _block_unexpected_reply
                 or msg.flags.value & NO_REPLY_EXPECTED_VALUE
             ):
-                fut.add_done_callback(self._pending_futures.discard)
+                fut.add_done_callback(self._future_exception_no_reply)
                 return
 
             # We only create the closure function if we are actually going to reply

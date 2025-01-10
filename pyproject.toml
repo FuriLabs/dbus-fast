@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dbus-fast"
-version = "2.24.4"
+version = "2.28.0"
 description = "A faster version of dbus-next"
 authors = ["Bluetooth Devices Authors <bluetooth@koston.org>"]
 license = "MIT"
@@ -34,7 +34,7 @@ script = "build_ext.py"
 "Changelog" = "https://github.com/bluetooth-devices/dbus-fast/blob/main/CHANGELOG.md"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 
 # duplicated in docs/requirements.txt for readthedocs compatibility
 [tool.poetry.group.docs.dependencies]
@@ -53,6 +53,7 @@ PyGObject = "^3.42.2"
 Cython = ">=3,<3.1.0"
 setuptools = ">=65.4.1,<76.0.0"
 pytest-timeout = "^2.1.0"
+pytest-codspeed = "^3.1.1"
 
 [tool.semantic_release]
 branch = "main"
@@ -105,3 +106,12 @@ ignore_errors = true
 [build-system]
 requires = ['setuptools>=65.4.1', 'wheel', 'Cython>=3,<3.1.0', "poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py39"
+line-length = 88
+
+[tool.ruff.lint]
+ignore = [
+    "F821", # undefined names are used for decorators
+]

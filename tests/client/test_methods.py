@@ -40,7 +40,7 @@ class ExampleInterface(ServiceInterface):
         return [what1, what2, what3]
 
     @method()
-    def GetComplex(self) -> "a{sv}":
+    def GetComplex(self) -> "a{sv}":  # noqa: F722
         """Return complex output."""
         return {"hello": Variant("s", "world")}
 
@@ -117,7 +117,7 @@ async def test_aio_proxy_object():
     finally:
         logger.removeHandler(log_handler)
 
-    assert log_error_queue.empty()
+    assert log_error_queue.empty(), log_error_queue.get_nowait()
 
     bus.disconnect()
     bus2.disconnect()
