@@ -16,7 +16,6 @@ Build-Depends:
  python3-poetry-core,
  python3-pytest <!nocheck>,
  python3-pytest-asyncio <!nocheck>,
- python3-pytest-codspeed <!nocheck>,
  python3-pytest-cov <!nocheck>,
  python3-setuptools,
  python3-sphinx,

@@ -6,7 +6,6 @@ Depends:
  python3-poetry-core,
  python3-pytest,
  python3-pytest-asyncio,
- python3-pytest-codspeed,
  python3-pytest-cov,
  python3-setuptools,
  xauth,

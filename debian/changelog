@@ -1,3 +1,10 @@
+dbus-fast (2.30.2-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Avoid pytest-codspeed because it is not available on all architectures.
+
+ -- Edward Betts <edward@4angle.com>  Sat, 25 Jan 2025 11:36:26 +0100
+
 dbus-fast (2.28.0-1) unstable; urgency=medium
 
   * New upstream release.
