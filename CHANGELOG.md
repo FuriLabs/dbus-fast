@@ -2,6 +2,34 @@
 
 <!--next-version-placeholder-->
 
+## v2.30.2 (2025-01-17)
+
+### Fix
+
+* Fetching release tag during build ([#368](https://github.com/Bluetooth-Devices/dbus-fast/issues/368)) ([`5a80415`](https://github.com/Bluetooth-Devices/dbus-fast/commit/5a804159669c2caad9d1144120ebaeb602d9ad28))
+
+## v2.30.1 (2025-01-17)
+
+### Fix
+
+* Wheel builds on aarch64 ([#367](https://github.com/Bluetooth-Devices/dbus-fast/issues/367)) ([`18132b9`](https://github.com/Bluetooth-Devices/dbus-fast/commit/18132b99bcbada1f090ccfc1c0050caf0827cd11))
+
+## v2.30.0 (2025-01-17)
+
+### Feature
+
+* Migrate to using native arm runners for wheel builds ([#366](https://github.com/Bluetooth-Devices/dbus-fast/issues/366)) ([`bdf08d2`](https://github.com/Bluetooth-Devices/dbus-fast/commit/bdf08d253bff9bc1edd7c9a5688b7d9e4eb73839))
+
+## v2.29.0 (2025-01-15)
+
+### Feature
+
+* **introspect:** Implement annotations ([#359](https://github.com/Bluetooth-Devices/dbus-fast/issues/359)) ([`5b61869`](https://github.com/Bluetooth-Devices/dbus-fast/commit/5b61869baec88cd1382419f4580c345473543493))
+
+### Fix
+
+* Void validate arguments/properties name ([#358](https://github.com/Bluetooth-Devices/dbus-fast/issues/358)) ([`f58f1a6`](https://github.com/Bluetooth-Devices/dbus-fast/commit/f58f1a6466d7ffb3a600774f8c36b5c93279437b))
+
 ## v2.28.0 (2025-01-07)
 
 ### Feature
