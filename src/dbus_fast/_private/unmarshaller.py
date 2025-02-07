@@ -243,7 +243,7 @@ class Unmarshaller:
         negotiate_unix_fd: bool = True,
     ) -> None:
         self._unix_fds: list[int] = []
-        self._buf = bytearray()  # Actual buffer
+        self._buf = bytearray.__new__(bytearray)  # Actual buffer
         self._stream = stream
         self._sock = sock
         self._message: Optional[Message] = None
@@ -280,7 +280,7 @@ class Unmarshaller:
         self._unix_fds = []
         to_clear = HEADER_SIGNATURE_SIZE + self._msg_len
         if len(self._buf) == to_clear:
-            self._buf = bytearray()
+            self._buf = bytearray.__new__(bytearray)
         else:
             del self._buf[:to_clear]
         self._msg_len = 0  # used to check if we have ready the header
@@ -587,7 +587,7 @@ class Unmarshaller:
                     self._pos += -self._pos & 7  # align 8
                     key = self._read_uint16_unpack()
                     result_dict[key] = self._read_variant()
-            if (
+            elif (
                 child_0_token_as_int == TOKEN_O_AS_INT
                 or child_0_token_as_int == TOKEN_S_AS_INT
             ) and child_1_token_as_int == TOKEN_A_AS_INT:
