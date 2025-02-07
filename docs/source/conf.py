@@ -43,7 +43,7 @@ release = __version__
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.githubpages",
-    "sphinxcontrib.fulltoc",
+#    "sphinxcontrib.fulltoc",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
