@@ -1,5 +1,5 @@
 From: Edward Betts <edward@4angle.com>
-Date: Thu, 20 Oct 2022 13:41:29 +0100
+Date: Fri, 7 Feb 2025 12:25:32 +0000
 Subject: disable the sphinxcontrib.fulltoc extension
 
 sphinxcontrib.fulltoc isn't required and isn't in Debian
@@ -8,13 +8,13 @@ sphinxcontrib.fulltoc isn't required and isn't in Debian
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/docs/source/conf.py b/docs/source/conf.py
-index 81e5439..bd39d4c 100644
+index 7f61bc3..25e4ac2 100644
 --- a/docs/source/conf.py
 +++ b/docs/source/conf.py
-@@ -44,7 +44,7 @@ extensions = [
+@@ -43,7 +43,7 @@ release = __version__
+ extensions = [
      "sphinx.ext.autodoc",
      "sphinx.ext.githubpages",
-     "sphinxcontrib.asyncio",
 -    "sphinxcontrib.fulltoc",
 +#    "sphinxcontrib.fulltoc",
  ]

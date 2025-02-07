@@ -20,7 +20,6 @@ Build-Depends:
  python3-setuptools,
  python3-sphinx,
  python3-sphinx-rtd-theme,
- python3-sphinxcontrib-asyncio (>= 0.3.0-2),
  xauth <!nocheck>,
  xvfb <!nocheck>,
 Rules-Requires-Root: no

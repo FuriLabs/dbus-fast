@@ -1,3 +1,11 @@
+dbus-fast (2.33.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Refresh the patch to disable the sphinxcontrib.fulltoc extension.
+  * Upstream no longer using python3-sphinxcontrib-asyncio.
+
+ -- Edward Betts <edward@4angle.com>  Fri, 07 Feb 2025 12:28:40 +0000
+
 dbus-fast (2.30.2-1) unstable; urgency=medium
 
   * New upstream release.
