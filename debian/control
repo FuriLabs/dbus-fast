@@ -23,7 +23,7 @@ Build-Depends:
  xauth <!nocheck>,
  xvfb <!nocheck>,
 Rules-Requires-Root: no
-Standards-Version: 4.7.0
+Standards-Version: 4.7.1
 Homepage: https://github.com/bluetooth-devices/dbus-fast
 Vcs-Browser: https://salsa.debian.org/python-team/packages/dbus-fast
 Vcs-Git: https://salsa.debian.org/python-team/packages/dbus-fast.git

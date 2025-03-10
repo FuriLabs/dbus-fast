@@ -1,0 +1,1 @@
+src/dbus_fast/*.c src/dbus_fast/*/*.c docs/_build/ setup.py

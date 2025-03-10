@@ -1,3 +1,12 @@
+dbus-fast (2.39.3-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Cython now works on big endian architectures, enable it everywhere.
+  * Update Standards-Version.
+  * Move files to clean from override_dh_auto_clean to debian/clean.
+
+ -- Edward Betts <edward@4angle.com>  Mon, 10 Mar 2025 11:27:18 +0100
+
 dbus-fast (2.33.0-1) unstable; urgency=medium
 
   * New upstream release.
