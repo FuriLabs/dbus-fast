@@ -5,6 +5,7 @@ import cython
 from ..message cimport Message
 from ..signature cimport SignatureTree, SignatureType, Variant
 
+cdef bint TYPE_CHECKING
 
 cdef object MAX_UNIX_FDS_SIZE
 cdef object ARRAY
@@ -59,6 +60,7 @@ cdef cython.dict MESSAGE_TYPE_MAP
 cdef cython.dict MESSAGE_FLAG_MAP
 cdef dict HEADER_MESSAGE_ARG_NAME
 
+
 cdef SignatureTree SIGNATURE_TREE_EMPTY
 cdef SignatureTree SIGNATURE_TREE_B
 cdef SignatureTree SIGNATURE_TREE_N
@@ -87,6 +89,7 @@ cdef SignatureType SIGNATURE_TREE_A_QV_TYPES_0
 cdef SignatureTree SIGNATURE_TREE_A_OA_SA_SV
 cdef SignatureType SIGNATURE_TREE_A_OA_SA_SV_TYPES_0
 
+
 cdef unsigned int TOKEN_B_AS_INT
 cdef unsigned int TOKEN_U_AS_INT
 cdef unsigned int TOKEN_Y_AS_INT
@@ -114,28 +117,23 @@ cdef cython.uint EWOULDBLOCK
 cdef get_signature_tree
 
 
-cdef inline unsigned long _cast_uint32_native(const char * payload, unsigned int offset):
-    cdef unsigned long *u32p = <unsigned long *> &payload[offset]
-    return u32p[0]
+cdef unsigned int _ustr_uint32(const unsigned char * buf, unsigned int offset, unsigned int endian) noexcept
 
-cdef inline short _cast_int16_native(const char *  payload, unsigned int offset):
-    cdef short *s16p = <short *> &payload[offset]
-    return s16p[0]
+cdef short _ustr_int16(const unsigned char * buf, unsigned int offset, unsigned int endian) noexcept
 
-cdef inline unsigned short _cast_uint16_native(const char *  payload, unsigned int offset):
-    cdef unsigned short *u16p = <unsigned short *> &payload[offset]
-    return u16p[0]
-
+cdef unsigned short _ustr_uint16(const unsigned char * buf, unsigned int offset, unsigned int endian) noexcept
 
 
 cdef class Unmarshaller:
 
-    cdef object _unix_fds
+    cdef list _unix_fds
     cdef bytearray _buf
+    cdef Py_ssize_t _buf_len
+    cdef const unsigned char * _buf_ustr
     cdef unsigned int _pos
     cdef object _stream
     cdef object _sock
-    cdef object _message
+    cdef Message _message
     cdef object _readers
     cdef unsigned int _body_len
     cdef unsigned int _serial
@@ -143,16 +141,17 @@ cdef class Unmarshaller:
     cdef object _message_type
     cdef object _flag
     cdef unsigned int _msg_len
-    cdef unsigned int _is_native
     cdef object _uint32_unpack
     cdef object _int16_unpack
     cdef object _uint16_unpack
     cdef object _stream_reader
-    cdef object _sock_reader
+    cdef object _sock_with_fds_reader
+    cdef object _sock_without_fds_reader
     cdef bint _negotiate_unix_fd
     cdef bint _read_complete
     cdef unsigned int _endian
 
+    @cython.locals(to_clear=Py_ssize_t)
     cdef _next_message(self)
 
     cdef bint _has_another_message_in_buffer(self)
@@ -162,20 +161,20 @@ cdef class Unmarshaller:
         recv=cython.tuple,
         errno=cython.uint
     )
-    cdef void _read_sock_with_fds(self, unsigned int pos, unsigned int missing_bytes)
+    cdef void _read_sock_with_fds(self, unsigned int pos, unsigned int missing_bytes) except *
 
     @cython.locals(
         data=cython.bytes,
         errno=cython.uint
     )
-    cdef void _read_sock_without_fds(self, unsigned int pos)
+    cdef void _read_sock_without_fds(self, unsigned int pos) except *
 
     @cython.locals(
         data=cython.bytes
     )
-    cdef void _read_stream(self, unsigned int pos, unsigned int missing_bytes)
+    cdef void _read_stream(self, unsigned int pos, unsigned int missing_bytes) except *
 
-    cdef void _read_to_pos(self, unsigned int pos)
+    cdef void _read_to_pos(self, unsigned int pos) except *
 
     cpdef read_boolean(self, SignatureType type_)
 
@@ -231,19 +230,21 @@ cdef class Unmarshaller:
         buffer=cython.bytearray,
         protocol_version=cython.uint,
         key=cython.str,
+        ustring="const unsigned char *",
     )
-    cdef _read_header(self)
+    cdef void _read_header(self) except *
 
     @cython.locals(
-        body=cython.list,
-        header_fields=cython.list,
-        token_as_int=cython.uint,
-        signature=cython.str,
+        body=list,
+        header_fields=list,
+        token_as_int="unsigned int",
+        signature=str,
+        tree=SignatureTree,
         message=Message
     )
-    cdef _read_body(self)
+    cdef void _read_body(self) except *
 
-    cdef _unmarshall(self)
+    cdef Message _unmarshall(self)
 
     cpdef unmarshall(self)
 

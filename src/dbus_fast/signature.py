@@ -21,15 +21,16 @@ class SignatureType:
     """
 
     _tokens = "ybnqiuxtdsogavh({"
-    __slots__ = ("token", "children", "_signature")
+    __slots__ = ("_signature", "children", "token", "token_as_int")
 
     def __init__(self, token: str) -> None:
         """Init a new SignatureType."""
         self.token: str = token
+        self.token_as_int = ord(token)
         self.children: list[SignatureType] = []
         self._signature: Optional[str] = None
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         """Compare this type to another type or signature string."""
         if type(other) is SignatureType:
             return self.signature == other.signature
@@ -77,7 +78,7 @@ class SignatureType:
                 raise InvalidSignatureError("missing type for array")
             self.children.append(child)
             return (self, signature)
-        elif token == "(":
+        if token == "(":
             self = SignatureType("(")
             signature = signature[1:]
             while True:
@@ -130,7 +131,7 @@ class SignatureType:
             raise SignatureBodyMismatchError(
                 f'DBus INT16 type "n" must be Python type "int", got {type(body)}'
             )
-        elif body > INT16_MAX or body < INT16_MIN:
+        if body > INT16_MAX or body < INT16_MIN:
             raise SignatureBodyMismatchError(
                 f'DBus INT16 type "n" must be between {INT16_MIN} and {INT16_MAX}'
             )
@@ -142,7 +143,7 @@ class SignatureType:
             raise SignatureBodyMismatchError(
                 f'DBus UINT16 type "q" must be Python type "int", got {type(body)}'
             )
-        elif body > UINT16_MAX or body < UINT16_MIN:
+        if body > UINT16_MAX or body < UINT16_MIN:
             raise SignatureBodyMismatchError(
                 f'DBus UINT16 type "q" must be between {UINT16_MIN} and {UINT16_MAX}'
             )
@@ -154,7 +155,7 @@ class SignatureType:
             raise SignatureBodyMismatchError(
                 f'DBus INT32 type "i" must be Python type "int", got {type(body)}'
             )
-        elif body > INT32_MAX or body < INT32_MIN:
+        if body > INT32_MAX or body < INT32_MIN:
             raise SignatureBodyMismatchError(
                 f'DBus INT32 type "i" must be between {INT32_MIN} and {INT32_MAX}'
             )
@@ -166,7 +167,7 @@ class SignatureType:
             raise SignatureBodyMismatchError(
                 f'DBus UINT32 type "u" must be Python type "int", got {type(body)}'
             )
-        elif body > UINT32_MAX or body < UINT32_MIN:
+        if body > UINT32_MAX or body < UINT32_MIN:
             raise SignatureBodyMismatchError(
                 f'DBus UINT32 type "u" must be between {UINT32_MIN} and {UINT32_MAX}'
             )
@@ -178,7 +179,7 @@ class SignatureType:
             raise SignatureBodyMismatchError(
                 f'DBus INT64 type "x" must be Python type "int", got {type(body)}'
             )
-        elif body > INT64_MAX or body < INT64_MIN:
+        if body > INT64_MAX or body < INT64_MIN:
             raise SignatureBodyMismatchError(
                 f'DBus INT64 type "x" must be between {INT64_MIN} and {INT64_MAX}'
             )
@@ -190,7 +191,7 @@ class SignatureType:
             raise SignatureBodyMismatchError(
                 f'DBus UINT64 type "t" must be Python type "int", got {type(body)}'
             )
-        elif body > UINT64_MAX or body < UINT64_MIN:
+        if body > UINT64_MAX or body < UINT64_MIN:
             raise SignatureBodyMismatchError(
                 f'DBus UINT64 type "t" must be between {UINT64_MIN} and {UINT64_MAX}'
             )
@@ -327,11 +328,14 @@ class SignatureTree:
     :ivar ~.signature: The signature of this signature tree.
     :vartype ~.signature: str
 
+    :ivar root_type: The root type of this signature tree.
+    :vartype root_type: :class:`SignatureType
+
     :raises:
         :class:`InvalidSignatureError` if the given signature is not valid.
     """
 
-    __slots__ = ("signature", "types")
+    __slots__ = ("root_type", "signature", "types")
 
     def __init__(self, signature: str = "") -> None:
         self.signature = signature
@@ -345,7 +349,9 @@ class SignatureTree:
             (type_, signature) = SignatureType._parse_next(signature)
             self.types.append(type_)
 
-    def __eq__(self, other: Any) -> bool:
+        self.root_type = self.types[0] if self.types else None
+
+    def __eq__(self, other: object) -> bool:
         if type(other) is SignatureTree:
             return self.signature == other.signature
         return super().__eq__(other)
@@ -393,7 +399,7 @@ class Variant:
         :class:`SignatureBodyMismatchError` if the signature does not match the body.
     """
 
-    __slots__ = ("type", "signature", "value")
+    __slots__ = ("signature", "type", "value")
 
     def __init__(
         self,
@@ -402,14 +408,6 @@ class Variant:
         verify: bool = True,
     ) -> None:
         """Init a new Variant."""
-        self._init_variant(signature, value, verify)
-
-    def _init_variant(
-        self,
-        signature: Union[str, SignatureTree, SignatureType],
-        value: Any,
-        verify: bool,
-    ) -> None:
         if type(signature) is SignatureTree:
             signature_tree = signature
             self.signature = signature_tree.signature
@@ -434,15 +432,21 @@ class Variant:
                 )
             self.type.verify(value)
 
-    def __eq__(self, other: Any) -> bool:
+    @staticmethod
+    def _factory(signature_tree: SignatureTree, value: Any) -> "Variant":
+        self = Variant.__new__(Variant)
+        self.signature = signature_tree.signature
+        self.type = signature_tree.root_type
+        self.value = value
+        return self
+
+    def __eq__(self, other: object) -> bool:
         if type(other) is Variant:
             return self.signature == other.signature and self.value == other.value
         return super().__eq__(other)
 
     def __repr__(self) -> str:
-        return "<dbus_fast.signature.Variant ('{}', {})>".format(
-            self.type.signature, self.value
-        )
+        return f"<dbus_fast.signature.Variant ('{self.type.signature}', {self.value})>"
 
 
 get_signature_tree = lru_cache(maxsize=None)(SignatureTree)

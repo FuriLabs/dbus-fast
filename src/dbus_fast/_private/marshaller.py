@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from struct import Struct, error
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable
 
 from ..signature import SignatureType, Variant, get_signature_tree
 
@@ -7,8 +9,8 @@ PACK_LITTLE_ENDIAN = "<"
 
 PACK_UINT32 = Struct(f"{PACK_LITTLE_ENDIAN}I").pack
 PACKED_UINT32_ZERO = PACK_UINT32(0)
-PACKED_BOOL_FALSE = PACK_UINT32(int(0))
-PACKED_BOOL_TRUE = PACK_UINT32(int(1))
+PACKED_BOOL_FALSE = PACK_UINT32(0)
+PACKED_BOOL_TRUE = PACK_UINT32(1)
 
 _int = int
 _bytes = bytes
@@ -18,7 +20,7 @@ _str = str
 class Marshaller:
     """Marshall data for Dbus."""
 
-    __slots__ = ("signature_tree", "_buf", "body")
+    __slots__ = ("_buf", "body", "signature_tree")
 
     def __init__(self, signature: str, body: list[Any]) -> None:
         """Marshaller constructor."""
@@ -85,21 +87,21 @@ class Marshaller:
         signature = variant.signature
         signature_bytes = signature.encode()
         written = self._write_signature(signature_bytes)
-        written += self._write_single(variant.type, variant.value)  # type: ignore[has-type]
+        written += self._write_single(variant.type, variant.value)
         return written
 
     def write_array(
-        self, array: Union[list[Any], dict[Any, Any]], type_: SignatureType
+        self, array: bytes | list[Any] | dict[Any, Any], type_: SignatureType
     ) -> int:
         return self._write_array(array, type_)
 
     def _write_array(
-        self, array: Union[list[Any], dict[Any, Any]], type_: SignatureType
+        self, array: bytes | list[Any] | dict[Any, Any], type_: SignatureType
     ) -> int:
         # TODO max array size is 64MiB (67108864 bytes)
         written = self._align(4)
         # length placeholder
-        buf = self._buf
+        buf: bytearray = self._buf
         offset = len(buf)
         written += self._align(4) + 4
         buf += PACKED_UINT32_ZERO
@@ -116,7 +118,7 @@ class Marshaller:
                 array_len += self.write_dict_entry([key, value], child_type)
         elif token == "y":
             array_len = len(array)
-            buf += array
+            buf += array  # type: ignore[arg-type]
         elif token == "(":
             for value in array:
                 array_len += self._write_struct(value, child_type)
@@ -136,14 +138,10 @@ class Marshaller:
 
         return written + array_len
 
-    def write_struct(
-        self, array: Union[tuple[Any], list[Any]], type_: SignatureType
-    ) -> int:
+    def write_struct(self, array: tuple[Any] | list[Any], type_: SignatureType) -> int:
         return self._write_struct(array, type_)
 
-    def _write_struct(
-        self, array: Union[tuple[Any], list[Any]], type_: SignatureType
-    ) -> int:
+    def _write_struct(self, array: tuple[Any] | list[Any], type_: SignatureType) -> int:
         written = self._align(8)
         for i, value in enumerate(array):
             written += self._write_single(type_.children[i], value)
@@ -160,25 +158,24 @@ class Marshaller:
         if t == "y":
             self._buf.append(body)
             return 1
-        elif t == "u":
+        if t == "u":
             written = self._align(4)
             self._buf += PACK_UINT32(body)
             return written + 4
-        elif t == "a":
+        if t == "a":
             return self._write_array(body, type_)
-        elif t == "s" or t == "o":
+        if t == "s" or t == "o":
             return self._write_string(body)
-        elif t == "v":
+        if t == "v":
             return self._write_variant(body, type_)
-        elif t == "b":
+        if t == "b":
             return self._write_boolean(body)
-        else:
-            writer, packer, size = self._writers[t]
-            if not writer:
-                written = self._align(size)
-                self._buf += packer(body)  # type: ignore[misc]
-                return written + size
-            return writer(self, body, type_)
+        writer, packer, size = self._writers[t]
+        if not writer:
+            written = self._align(size)
+            self._buf += packer(body)  # type: ignore[misc]
+            return written + size
+        return writer(self, body, type_)
 
     def marshall(self) -> bytearray:
         """Marshalls the body into a byte array"""
@@ -204,8 +201,8 @@ class Marshaller:
     _writers: dict[
         str,
         tuple[
-            Optional[Callable[[Any, Any, SignatureType], int]],
-            Optional[Callable[[Any], bytes]],
+            Callable[[Any, Any, SignatureType], int] | None,
+            Callable[[Any], bytes] | None,
             int,
         ],
     ] = {
