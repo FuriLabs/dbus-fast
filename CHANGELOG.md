@@ -1,6 +1,238 @@
 # CHANGELOG
 
 
+## v2.39.3 (2025-03-07)
+
+### Bug Fixes
+
+- Ensure void methods that can raise exceptions are marked
+  ([#417](https://github.com/Bluetooth-Devices/dbus-fast/pull/417),
+  [`c433dab`](https://github.com/Bluetooth-Devices/dbus-fast/commit/c433dab7b5622f3103607acb1acd7a91db841419))
+
+### Chores
+
+- Update aio package typing ([#416](https://github.com/Bluetooth-Devices/dbus-fast/pull/416),
+  [`28888b9`](https://github.com/Bluetooth-Devices/dbus-fast/commit/28888b9f49e063b122d6116309fbb3d0aec984f7))
+
+
+## v2.39.2 (2025-03-07)
+
+### Bug Fixes
+
+- Correct size of uint32 with cython
+  ([#415](https://github.com/Bluetooth-Devices/dbus-fast/pull/415),
+  [`f64eb58`](https://github.com/Bluetooth-Devices/dbus-fast/commit/f64eb58573e068ad731f6dc268dd903dee2e66af))
+
+* chore: add more coverage for big endian systems
+
+* chore: fix overflow
+
+* fix: should have been unsigned int
+
+
+## v2.39.1 (2025-03-07)
+
+### Bug Fixes
+
+- Ensure proxy object tasks do not get garbage collected prematurely
+  ([#409](https://github.com/Bluetooth-Devices/dbus-fast/pull/409),
+  [`4fcdbed`](https://github.com/Bluetooth-Devices/dbus-fast/commit/4fcdbed1e5ab828e95b2a16ac0058ebbe0a64f78))
+
+
+## v2.39.0 (2025-03-06)
+
+### Chores
+
+- Enable some more ruff rules ([#414](https://github.com/Bluetooth-Devices/dbus-fast/pull/414),
+  [`2bad648`](https://github.com/Bluetooth-Devices/dbus-fast/commit/2bad648c61f139e168c083b05e183ceaa29005f8))
+
+- Sort imports ([#413](https://github.com/Bluetooth-Devices/dbus-fast/pull/413),
+  [`a589651`](https://github.com/Bluetooth-Devices/dbus-fast/commit/a589651511e1787f0025d7ab440ed1617b133b48))
+
+### Features
+
+- Improve performance of signature lookups
+  ([#412](https://github.com/Bluetooth-Devices/dbus-fast/pull/412),
+  [`5068e41`](https://github.com/Bluetooth-Devices/dbus-fast/commit/5068e41488e71499265e1fc3ea7d4210821e09a2))
+
+- Added `SignatureTree` type in a few more places to avoid python lookups - Improved performance and
+  reduced code to create `Variant` object
+
+
+## v2.38.0 (2025-03-06)
+
+### Chores
+
+- Remove unused boilerplate cruft ([#411](https://github.com/Bluetooth-Devices/dbus-fast/pull/411),
+  [`a56381a`](https://github.com/Bluetooth-Devices/dbus-fast/commit/a56381a7a10b243061f29d0f90b3fd63d2e600e4))
+
+### Features
+
+- Improve performance of checking SignatureType tokens
+  ([#410](https://github.com/Bluetooth-Devices/dbus-fast/pull/410),
+  [`4887160`](https://github.com/Bluetooth-Devices/dbus-fast/commit/488716020e275ef777454724d2ab41cfc050b40a))
+
+* feat: improve performance of checking SignatureType tokens
+
+* chore: fixes
+
+
+## v2.37.1 (2025-03-06)
+
+### Bug Fixes
+
+- Correctly handle big endian data ([#405](https://github.com/Bluetooth-Devices/dbus-fast/pull/405),
+  [`0adab93`](https://github.com/Bluetooth-Devices/dbus-fast/commit/0adab935e3c5850647e640c777daf4273ea1efd9))
+
+### Chores
+
+- Add s390x tests ([#408](https://github.com/Bluetooth-Devices/dbus-fast/pull/408),
+  [`81ce030`](https://github.com/Bluetooth-Devices/dbus-fast/commit/81ce03058a64e9fd304981ef9e05bf6415dc1fb3))
+
+- Add more coverage for marshall ([#406](https://github.com/Bluetooth-Devices/dbus-fast/pull/406),
+  [`ed38f69`](https://github.com/Bluetooth-Devices/dbus-fast/commit/ed38f690f5926b17354810c51ac0dee900d9f01e))
+
+- Fix type for hello message constant
+  ([#407](https://github.com/Bluetooth-Devices/dbus-fast/pull/407),
+  [`df5325a`](https://github.com/Bluetooth-Devices/dbus-fast/commit/df5325a7ef80de544e16783deec3ea183e02d6ba))
+
+core: fix type for hello message constant
+
+- Update deps ([#404](https://github.com/Bluetooth-Devices/dbus-fast/pull/404),
+  [`6dca98d`](https://github.com/Bluetooth-Devices/dbus-fast/commit/6dca98d68af494641c91cf53949fe207188b99a3))
+
+dependabot is still broken with poetry 2
+
+- Updating certifi (2024.12.14 -> 2025.1.31) - Updating babel (2.16.0 -> 2.17.0) - Updating jinja2
+  (3.1.5 -> 3.1.6) - Updating coverage (7.6.10 -> 7.6.12)
+
+
+## v2.37.0 (2025-03-06)
+
+### Features
+
+- Add support for finding message handlers when interface is None
+  ([#403](https://github.com/Bluetooth-Devices/dbus-fast/pull/403),
+  [`bfd48a3`](https://github.com/Bluetooth-Devices/dbus-fast/commit/bfd48a3a38cba0dc66d581eedd0da0b228bc1953))
+
+
+## v2.36.0 (2025-03-05)
+
+### Chores
+
+- Add covdefaults ([#401](https://github.com/Bluetooth-Devices/dbus-fast/pull/401),
+  [`dc3d8e7`](https://github.com/Bluetooth-Devices/dbus-fast/commit/dc3d8e7609f37a2f064a45ae525c5ce5711ea272))
+
+- Upgrade typing on private modules
+  ([#402](https://github.com/Bluetooth-Devices/dbus-fast/pull/402),
+  [`640e1f8`](https://github.com/Bluetooth-Devices/dbus-fast/commit/640e1f8d87a753d6721dae77ee94ff8702a2f508))
+
+* chore: upgrade typing on private modules
+
+* chore: typing fixes
+
+### Features
+
+- Refactor service bus handler lookup to avoid linear searches
+  ([#400](https://github.com/Bluetooth-Devices/dbus-fast/pull/400),
+  [`996659e`](https://github.com/Bluetooth-Devices/dbus-fast/commit/996659e1b5fefeda7eb01259714a4a17fc224b9f))
+
+
+## v2.35.1 (2025-03-05)
+
+### Bug Fixes
+
+- Reduce size of wheels ([#399](https://github.com/Bluetooth-Devices/dbus-fast/pull/399),
+  [`6531b93`](https://github.com/Bluetooth-Devices/dbus-fast/commit/6531b93a5ba5447494818cf7f8c38454b1338052))
+
+first attempt failed to change the correct constant in build_ext.py
+
+
+## v2.35.0 (2025-03-05)
+
+### Chores
+
+- **deps-ci**: Bump python-semantic-release/python-semantic-release from 9.17.0 to 9.21.0 in the
+  github-actions group ([#394](https://github.com/Bluetooth-Devices/dbus-fast/pull/394),
+  [`a7e1a90`](https://github.com/Bluetooth-Devices/dbus-fast/commit/a7e1a907e360c1f3fc01a62a414693782f536e61))
+
+chore(deps-ci): bump python-semantic-release/python-semantic-release
+
+Bumps the github-actions group with 1 update:
+  [python-semantic-release/python-semantic-release](https://github.com/python-semantic-release/python-semantic-release).
+
+Updates `python-semantic-release/python-semantic-release` from 9.17.0 to 9.21.0 - [Release
+  notes](https://github.com/python-semantic-release/python-semantic-release/releases) -
+  [Changelog](https://github.com/python-semantic-release/python-semantic-release/blob/master/CHANGELOG.rst)
+  -
+  [Commits](https://github.com/python-semantic-release/python-semantic-release/compare/v9.17.0...v9.21.0)
+
+--- updated-dependencies: - dependency-name: python-semantic-release/python-semantic-release
+  dependency-type: direct:production
+
+update-type: version-update:semver-minor
+
+dependency-group: github-actions ...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+
+- **deps-dev**: Bump pytest from 8.3.4 to 8.3.5
+  ([#395](https://github.com/Bluetooth-Devices/dbus-fast/pull/395),
+  [`0d0e600`](https://github.com/Bluetooth-Devices/dbus-fast/commit/0d0e600a940fa4cb82473fec7bfb8706ed7ff7f7))
+
+- **deps-dev**: Bump setuptools from 75.8.0 to 75.8.2
+  ([#396](https://github.com/Bluetooth-Devices/dbus-fast/pull/396),
+  [`2623a74`](https://github.com/Bluetooth-Devices/dbus-fast/commit/2623a7412afeb906b2863b05fefb0d94e8881dcb))
+
+- **pre-commit.ci**: Pre-commit autoupdate
+  ([#392](https://github.com/Bluetooth-Devices/dbus-fast/pull/392),
+  [`3ef89bf`](https://github.com/Bluetooth-Devices/dbus-fast/commit/3ef89bfbf45592401dae60bf93104e063f082160))
+
+Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+- **pre-commit.ci**: Pre-commit autoupdate
+  ([#397](https://github.com/Bluetooth-Devices/dbus-fast/pull/397),
+  [`3dd7c35`](https://github.com/Bluetooth-Devices/dbus-fast/commit/3dd7c358fad92ef7dcb42c361ebac367f10e3ce2))
+
+updates: - [github.com/commitizen-tools/commitizen: v4.2.2 →
+  v4.4.1](https://github.com/commitizen-tools/commitizen/compare/v4.2.2...v4.4.1) -
+  [github.com/astral-sh/ruff-pre-commit: v0.9.7 →
+  v0.9.9](https://github.com/astral-sh/ruff-pre-commit/compare/v0.9.7...v0.9.9)
+
+Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+### Features
+
+- Reduce size of wheels ([#398](https://github.com/Bluetooth-Devices/dbus-fast/pull/398),
+  [`a4c2743`](https://github.com/Bluetooth-Devices/dbus-fast/commit/a4c2743420f619d8808413d8877b2c9badc5f3f0))
+
+Compile with -g0 to reduce the binary size
+
+
+## v2.34.0 (2025-02-24)
+
+### Chores
+
+- **deps-dev**: Bump cython from 3.0.11 to 3.0.12
+  ([#391](https://github.com/Bluetooth-Devices/dbus-fast/pull/391),
+  [`5f26f5d`](https://github.com/Bluetooth-Devices/dbus-fast/commit/5f26f5d58c5e0ed6251c66ab4724f27a383500a0))
+
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+
+- **pre-commit.ci**: Pre-commit autoupdate
+  ([#389](https://github.com/Bluetooth-Devices/dbus-fast/pull/389),
+  [`c713bf3`](https://github.com/Bluetooth-Devices/dbus-fast/commit/c713bf3de994564c92628f92bdf341fbf813c8f4))
+
+Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+### Features
+
+- Resync generic D-Bus errors ([#393](https://github.com/Bluetooth-Devices/dbus-fast/pull/393),
+  [`e4f37ee`](https://github.com/Bluetooth-Devices/dbus-fast/commit/e4f37ee10bd2af64716de0bd389db90b47373b76))
+
+
 ## v2.33.0 (2025-02-05)
 
 ### Chores

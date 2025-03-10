@@ -51,7 +51,7 @@ class Arg:
     def __init__(
         self,
         signature: Union[SignatureType, str],
-        direction: Optional[list[ArgDirection]] = None,
+        direction: Optional[ArgDirection] = None,
         name: Optional[str] = None,
         annotations: Optional[dict[str, str]] = None,
     ):
@@ -568,9 +568,8 @@ class Node:
                     indent(elem, level + 1)
                 if not elem.tail or not elem.tail.strip():
                     elem.tail = i
-            else:
-                if level and (not elem.tail or not elem.tail.strip()):
-                    elem.tail = i
+            elif level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
 
         xml = self.to_xml()
         indent(xml)
