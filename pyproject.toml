@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dbus-fast"
-version = "2.39.3"
+version = "2.39.5"
 description = "A faster version of dbus-next"
 authors = ["Bluetooth Devices Authors <bluetooth@koston.org>"]
 license = "MIT"
@@ -51,7 +51,7 @@ pytest-asyncio = ">=0.19,<0.26"
 pycairo = "^1.21.0"
 PyGObject = "^3.42.2"
 Cython = ">=3,<3.1.0"
-setuptools = ">=65.4.1,<76.0.0"
+setuptools = ">=65.4.1,<77.0.0"
 pytest-timeout = "^2.1.0"
 pytest-codspeed = "^3.1.1"
 covdefaults = "^2.3.0"
@@ -120,7 +120,6 @@ ignore = [
     "SIM109", # intended for cython
     "SIM102", # intended for cython
     "E501", # too many to fix,
-    "TC001", # too many to fix right now
     "TID252", # intended
     "PLC0414", # intended
     "TRY003", # too many to fix
@@ -128,7 +127,7 @@ ignore = [
     "PLR0911", # api is public
     "PYI036", # too many to fix
     "PYI034", # too many to fix
-    "TC003", # too many to fix
+    "E721",  # many are as intended
     ## should fix these sooner
     "B007", # too many to fix -- should fix sooner
     "SIM103", # too many to fix -- should fix sooner
@@ -138,7 +137,6 @@ ignore = [
     "B904", # too many to fix -- should fix sooner
     "PERF401", # too many to fix -- should fix sooner
     "B904", # too many to fix -- should fix sooner
-    "PLR1704", # too many to fix -- should fix sooner
     "B006", # too many to fix -- should fix sooner
     "G004", # too many to fix -- should fix sooner
     "PT015", # too many to fix -- should fix sooner
@@ -171,6 +169,7 @@ select = [
     "W",   # pycodestyle
     "UP",  # pyupgrade
     "I",   # isort
+    "LOG",  # log
     "RUF", # ruff specific
     "FLY", # flynt
     "FURB", # refurb
@@ -188,7 +187,6 @@ select = [
     "SLOT", # flake8-slots
     "T100", # Trace found: {name} used
     "T20", # flake8-print
-    "TC", # flake8-type-checking
     "TID", # Tidy imports
     "TRY", # tryceratops
 ]
@@ -226,8 +224,6 @@ select = [
     "PLR0913", # skip this one
     "SIM102" , # too many to fix right now
     "SIM108", # too many to fix right now
-    "TC003",  # too many to fix right now
-    "TC002", # too many to fix right now
     "T201", # too many to fix right now
 ]
 "bench/**/*" = [
@@ -237,4 +233,8 @@ select = [
     "T201", # intended
     "RSE102", # too many to fix
     "C408", # too many to fix
+    "E402", # as intended
+]
+"docs/**/*" = [
+    "E402", # as intended
 ]
