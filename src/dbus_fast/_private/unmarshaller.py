@@ -120,6 +120,10 @@ TOKEN_LEFT_CURLY_AS_INT = ord("{")
 TOKEN_LEFT_PAREN_AS_INT = ord("(")
 
 
+VARIANT_BOOL_TRUE = Variant._factory(SIGNATURE_TREE_B, True)
+VARIANT_BOOL_FALSE = Variant._factory(SIGNATURE_TREE_B, False)
+
+
 ARRAY = array.array
 SOL_SOCKET = socket.SOL_SOCKET
 SCM_RIGHTS = socket.SCM_RIGHTS
@@ -539,14 +543,17 @@ class Unmarshaller:
             if token_as_int == TOKEN_S_AS_INT:
                 return Variant._factory(SIGNATURE_TREE_S, self._read_string_unpack())
             if token_as_int == TOKEN_B_AS_INT:
-                return Variant._factory(SIGNATURE_TREE_B, self._read_boolean())
+                return VARIANT_BOOL_TRUE if self._read_boolean() else VARIANT_BOOL_FALSE
             if token_as_int == TOKEN_O_AS_INT:
                 return Variant._factory(SIGNATURE_TREE_O, self._read_string_unpack())
             if token_as_int == TOKEN_U_AS_INT:
                 return Variant._factory(SIGNATURE_TREE_U, self._read_uint32_unpack())
             if token_as_int == TOKEN_Y_AS_INT:
+                if cython.compiled:
+                    if self._buf_len < self._pos:
+                        raise IndexError("Not enough data to read byte")
                 self._pos += 1
-                return Variant._factory(SIGNATURE_TREE_Y, self._buf[self._pos - 1])
+                return Variant._factory(SIGNATURE_TREE_Y, self._buf_ustr[self._pos - 1])
         elif token_as_int == TOKEN_A_AS_INT:
             if signature == "ay":
                 return Variant._factory(
@@ -600,39 +607,41 @@ class Unmarshaller:
             )
         else:
             array_length = self._uint32_unpack(self._buf, self._pos - UINT32_SIZE)[0]
-        child_type: SignatureType = type_.children[0]
+        child_type = type_._child_0
         token_as_int = child_type.token_as_int
 
-        if (
-            token_as_int == TOKEN_X_AS_INT
-            or token_as_int == TOKEN_T_AS_INT
-            or token_as_int == TOKEN_D_AS_INT
-            or token_as_int == TOKEN_LEFT_CURLY_AS_INT
-            or token_as_int == TOKEN_LEFT_PAREN_AS_INT
-        ):
+        if token_as_int in {
+            TOKEN_X_AS_INT,
+            TOKEN_T_AS_INT,
+            TOKEN_D_AS_INT,
+            TOKEN_LEFT_CURLY_AS_INT,
+            TOKEN_LEFT_PAREN_AS_INT,
+        }:
             # the first alignment is not included in the array size
             self._pos += -self._pos & 7  # align 8
 
         if token_as_int == TOKEN_Y_AS_INT:
             self._pos += array_length
-            return self._buf[self._pos - array_length : self._pos]
+            if cython.compiled:
+                if self._buf_len < self._pos:
+                    raise IndexError("Not enough data to read byte")
+            return self._buf_ustr[self._pos - array_length : self._pos]
 
         if token_as_int == TOKEN_LEFT_CURLY_AS_INT:
             result_dict: dict[Any, Any] = {}
             key: str | int
             beginning_pos = self._pos
-            children = child_type.children
-            child_0 = children[0]
-            child_1 = children[1]
+            child_0 = child_type._child_0
+            child_1 = child_type._child_1
             child_0_token_as_int = child_0.token_as_int
             child_1_token_as_int = child_1.token_as_int
             # Strings with variant values are the most common case
             # so we optimize for that by inlining the string reading
             # and the variant reading here
             if (
-                child_0_token_as_int == TOKEN_O_AS_INT
-                or child_0_token_as_int == TOKEN_S_AS_INT
-            ) and child_1_token_as_int == TOKEN_V_AS_INT:
+                child_0_token_as_int in {TOKEN_O_AS_INT, TOKEN_S_AS_INT}
+                and child_1_token_as_int == TOKEN_V_AS_INT
+            ):
                 while self._pos - beginning_pos < array_length:
                     self._pos += -self._pos & 7  # align 8
                     key = self._read_string_unpack()
@@ -646,9 +655,9 @@ class Unmarshaller:
                     key = self._read_uint16_unpack()
                     result_dict[key] = self._read_variant()
             elif (
-                child_0_token_as_int == TOKEN_O_AS_INT
-                or child_0_token_as_int == TOKEN_S_AS_INT
-            ) and child_1_token_as_int == TOKEN_A_AS_INT:
+                child_0_token_as_int in {TOKEN_O_AS_INT, TOKEN_S_AS_INT}
+                and child_1_token_as_int == TOKEN_A_AS_INT
+            ):
                 while self._pos - beginning_pos < array_length:
                     self._pos += -self._pos & 7  # align 8
                     key = self._read_string_unpack()
@@ -693,6 +702,9 @@ class Unmarshaller:
             # first we read the signature
             signature_len = self._buf_ustr[self._pos]  # byte
             o = self._pos + 1
+            if cython.compiled:
+                if self._buf_len < o + signature_len:
+                    raise IndexError("Not enough data to read signature")
             self._pos += signature_len + 2  # one for the byte, one for the '\0'
             if field_0 == HEADER_UNIX_FDS_IDX:  # defined by self._unix_fds
                 continue
@@ -705,7 +717,7 @@ class Unmarshaller:
             elif token_as_int == TOKEN_G_AS_INT:
                 headers[field_0] = self._read_signature()
             else:
-                token = self._buf[o : o + signature_len].decode()
+                token = self._buf_ustr[o : o + signature_len].decode()
                 # There shouldn't be any other types in the header
                 # but just in case, we'll read it using the slow path
                 headers[field_0] = self._readers[token](
