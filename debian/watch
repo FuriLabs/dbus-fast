@@ -1,2 +1,5 @@
-version=4
-https://github.com/bluetooth-devices/dbus-fast/tags .*/v?(\d\S+)\.tar\.gz
+Version: 5
+
+Template: Github
+Owner: bluetooth-devices
+Project: dbus-fast
