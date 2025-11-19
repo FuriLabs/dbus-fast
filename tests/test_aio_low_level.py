@@ -44,6 +44,7 @@ async def test_standard_interfaces():
     assert type(reply.body[0]) is str
 
     bus.disconnect()
+    await asyncio.wait_for(bus.wait_for_disconnect(), timeout=1)
 
 
 @pytest.mark.asyncio
@@ -63,6 +64,7 @@ async def test_error_handling():
     assert reply.signature == "s"
 
     bus.disconnect()
+    await asyncio.wait_for(bus.wait_for_disconnect(), timeout=1)
 
 
 @pytest.mark.asyncio
@@ -123,11 +125,18 @@ async def test_sending_messages_between_buses():
 
     msg.serial = bus2.next_serial()
     msg.flags = MessageFlag.NO_REPLY_EXPECTED
-    reply = await bus2.call(msg)
+
+    with pytest.warns(DeprecationWarning):
+        reply = await bus2.call(msg)
+        assert reply is None
+
+    reply = await bus2.send(msg)
     assert reply is None
 
     bus1.disconnect()
     bus2.disconnect()
+    await asyncio.wait_for(bus1.wait_for_disconnect(), timeout=1)
+    await asyncio.wait_for(bus2.wait_for_disconnect(), timeout=1)
 
 
 @pytest.mark.asyncio
@@ -174,3 +183,5 @@ async def test_sending_signals_between_buses():
 
     bus1.disconnect()
     bus2.disconnect()
+    await asyncio.wait_for(bus1.wait_for_disconnect(), timeout=1)
+    await asyncio.wait_for(bus2.wait_for_disconnect(), timeout=1)

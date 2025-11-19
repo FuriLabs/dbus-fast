@@ -1,3 +1,5 @@
+# cython: freethreading_compatible = True
+
 from __future__ import annotations
 
 import array
@@ -5,9 +7,9 @@ import errno
 import io
 import socket
 import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from struct import Struct
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from ..constants import MESSAGE_FLAG_MAP, MESSAGE_TYPE_MAP, MessageFlag
 from ..errors import InvalidMessageError
@@ -581,12 +583,12 @@ class Unmarshaller:
             tree, self._readers[signature_type.token](self, signature_type)
         )
 
-    def read_struct(self, type_: _SignatureType) -> list[Any]:
+    def read_struct(self, type_: _SignatureType) -> tuple[Any, ...]:
         self._pos += -self._pos & 7  # align 8
         readers = self._readers
-        return [
+        return tuple(
             readers[child_type.token](self, child_type) for child_type in type_.children
-        ]
+        )
 
     def read_dict_entry(self, type_: _SignatureType) -> tuple[Any, Any]:
         self._pos += -self._pos & 7  # align 8
