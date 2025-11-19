@@ -1,10 +1,13 @@
+# cython: freethreading_compatible = True
+
 from __future__ import annotations
 
 import asyncio
 import copy
 import inspect
+from collections.abc import Callable
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Protocol
+from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, Protocol, TypeVar, cast
 
 from . import introspection as intr
 from ._private.util import (
@@ -32,8 +35,15 @@ str_ = str
 HandlerType = Callable[[Message, SendReply], None]
 
 
+_P = ParamSpec("_P")
+_TInterface = TypeVar("_TInterface", bound="ServiceInterface")
+
+
 class _MethodCallbackProtocol(Protocol):
     def __call__(self, interface: ServiceInterface, *args: Any) -> Any: ...
+
+
+_background_tasks: set[asyncio.Task[Any]] = set()
 
 
 class _Method:
@@ -74,7 +84,9 @@ class _Method:
         self.out_signature_tree = get_signature_tree(out_signature)
 
 
-def method(name: str | None = None, disabled: bool = False) -> Callable:
+def dbus_method(
+    name: str | None = None, disabled: bool = False
+) -> Callable[[Callable[_P, Any]], Callable[_P, None]]:
     """A decorator to mark a class method of a :class:`ServiceInterface` to be a DBus service method.
 
     The parameters and return value must each be annotated with a signature
@@ -99,37 +111,47 @@ def method(name: str | None = None, disabled: bool = False) -> Callable:
 
     ::
 
-        @method()
+        @dbus_method()
         def echo(self, val: 's') -> 's':
             return val
 
-        @method()
+        @dbus_method()
         def echo_two(self, val1: 's', val2: 'u') -> 'su':
             return [val1, val2]
+
+    .. versionadded:: v2.46.0
+        In older versions, this was named ``@method``. The old name still exists.
     """
     if name is not None and type(name) is not str:
         raise TypeError("name must be a string")
     if type(disabled) is not bool:
         raise TypeError("disabled must be a bool")
 
-    def decorator(fn: Callable) -> Callable:
+    def decorator(fn: Callable[_P, Any]) -> Callable[_P, None]:
         @wraps(fn)
-        def wrapped(*args: Any, **kwargs: Any) -> None:
+        def wrapped(*args: _P.args, **kwargs: _P.kwargs) -> None:
             fn(*args, **kwargs)
 
         fn_name = name if name else fn.__name__
-        wrapped.__dict__["__DBUS_METHOD"] = _Method(fn, fn_name, disabled=disabled)
+        wrapped.__dict__["__DBUS_METHOD"] = _Method(
+            cast(_MethodCallbackProtocol, fn), fn_name, disabled=disabled
+        )
 
         return wrapped
 
     return decorator
 
 
+method = dbus_method  # backward compatibility alias
+
+
 class _Signal:
-    def __init__(self, fn: Callable, name: str, disabled: bool = False) -> None:
+    def __init__(
+        self, fn: Callable[..., Any], name: str, disabled: bool = False
+    ) -> None:
         inspection = inspect.signature(fn)
 
-        args = []
+        args: list[intr.Arg] = []
         signature = ""
         signature_tree = None
 
@@ -151,7 +173,12 @@ class _Signal:
         self.introspection = intr.Signal(self.name, args)
 
 
-def signal(name: str | None = None, disabled: bool = False) -> Callable:
+def dbus_signal(
+    name: str | None = None, disabled: bool = False
+) -> Callable[
+    [Callable[Concatenate[_TInterface, _P], Any]],
+    Callable[Concatenate[_TInterface, _P], Any],
+]:
     """A decorator to mark a class method of a :class:`ServiceInterface` to be a DBus signal.
 
     The signal is broadcast on the bus when the decorated class method is
@@ -173,25 +200,30 @@ def signal(name: str | None = None, disabled: bool = False) -> Callable:
 
     ::
 
-        @signal()
+        @dbus_signal()
         def string_signal(self, val) -> 's':
             return val
 
-        @signal()
+        @dbus_signal()
         def two_strings_signal(self, val1, val2) -> 'ss':
             return [val1, val2]
+
+    .. versionadded:: v2.46.0
+        In older versions, this was named ``@signal``. The old name still exists.
     """
     if name is not None and type(name) is not str:
         raise TypeError("name must be a string")
     if type(disabled) is not bool:
         raise TypeError("disabled must be a bool")
 
-    def decorator(fn: Callable) -> Callable:
+    def decorator(
+        fn: Callable[Concatenate[_TInterface, _P], Any],
+    ) -> Callable[Concatenate[_TInterface, _P], Any]:
         fn_name = name if name else fn.__name__
         signal = _Signal(fn, fn_name, disabled)
 
         @wraps(fn)
-        def wrapped(self, *args: Any, **kwargs: Any) -> Any:
+        def wrapped(self: _TInterface, *args: _P.args, **kwargs: _P.kwargs) -> Any:
             if signal.disabled:
                 raise SignalDisabledError("Tried to call a disabled signal")
             result = fn(self, *args, **kwargs)
@@ -203,6 +235,9 @@ def signal(name: str | None = None, disabled: bool = False) -> Callable:
         return wrapped
 
     return decorator
+
+
+signal = dbus_signal  # backward compatibility alias
 
 
 class _Property(property):
@@ -226,9 +261,9 @@ class _Property(property):
 
         self.__dict__["__DBUS_PROPERTY"] = True
 
-    def __init__(self, fn, *args, **kwargs):
+    def __init__(self, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
         self.prop_getter = fn
-        self.prop_setter = None
+        self.prop_setter: Callable[..., Any] | None = None
 
         inspection = inspect.signature(fn)
         if len(inspection.parameters) != 1:
@@ -256,11 +291,11 @@ class _Property(property):
 
         super().__init__(fn, *args, **kwargs)
 
-    def setter(self, fn, **kwargs):
+    def setter(self, fn: Callable[..., Any], **kwargs: Any) -> _Property:
         # XXX The setter decorator seems to be recreating the class in the list
         # of class members and clobbering the options so we need to reset them.
         # Why does it do that?
-        result = super().setter(fn, **kwargs)
+        result = cast(_Property, super().setter(fn, **kwargs))
         result.prop_setter = fn
         result.set_options(self.options)
         return result
@@ -270,7 +305,7 @@ def dbus_property(
     access: PropertyAccess = PropertyAccess.READWRITE,
     name: str | None = None,
     disabled: bool = False,
-) -> Callable:
+) -> Callable[[Callable[..., Any]], _Property]:
     """A decorator to mark a class method of a :class:`ServiceInterface` to be a DBus property.
 
     The class method must be a Python getter method with a return annotation
@@ -315,8 +350,8 @@ def dbus_property(
     if type(disabled) is not bool:
         raise TypeError("disabled must be a bool")
 
-    def decorator(fn: Callable) -> _Property:
-        options = {"name": name, "access": access, "disabled": disabled}
+    def decorator(fn: Callable[..., Any]) -> _Property:
+        options: dict[str, Any] = {"name": name, "access": access, "disabled": disabled}
         return _Property(fn, options=options)
 
     return decorator
@@ -358,9 +393,9 @@ class ServiceInterface:
     with the :class:`export <dbus_fast.message_bus.BaseMessageBus.export>`
     method of a :class:`MessageBus <dbus_fast.message_bus.BaseMessageBus>`.
 
-    Use the :func:`@method <dbus_fast.service.method>`, :func:`@dbus_property
-    <dbus_fast.service.dbus_property>`, and :func:`@signal
-    <dbus_fast.service.signal>` decorators to mark class methods as DBus
+    Use the :func:`@dbus_method <dbus_fast.service.dbus_method>`, :func:`@dbus_property
+    <dbus_fast.service.dbus_property>`, and :func:`@dbus_signal
+    <dbus_fast.service.dbus_signal>` decorators to mark class methods as DBus
     methods, properties, and signals respectively.
 
     :ivar name: The name of this interface as it appears to clients. Must be a
@@ -434,7 +469,7 @@ class ServiceInterface:
                     prop.signature, changed_properties[prop.name]
                 )
 
-        body = [self.name, variant_dict, invalidated_properties]
+        body: list[Any] = [self.name, variant_dict, invalidated_properties]
         for bus in ServiceInterface._get_buses(self):
             bus._interface_signal_notify(
                 self,
@@ -588,10 +623,13 @@ class ServiceInterface:
     ) -> None:
         # XXX MUST CHECK TYPE RETURNED BY GETTER
         try:
-            if asyncio.iscoroutinefunction(prop.prop_getter):
-                task: asyncio.Task = asyncio.ensure_future(prop.prop_getter(interface))
+            if inspect.iscoroutinefunction(prop.prop_getter):
+                task: asyncio.Task[Any] = asyncio.ensure_future(
+                    prop.prop_getter(interface)
+                )
 
-                def get_property_callback(task_: asyncio.Task) -> None:
+                def get_property_callback(task_: asyncio.Task[Any]) -> None:
+                    _background_tasks.remove(task_)
                     try:
                         result = task_.result()
                     except Exception as e:
@@ -601,6 +639,7 @@ class ServiceInterface:
                     callback(interface, prop, result, None)
 
                 task.add_done_callback(get_property_callback)
+                _background_tasks.add(task)
                 return
 
             callback(
@@ -618,12 +657,13 @@ class ServiceInterface:
     ) -> None:
         # XXX MUST CHECK TYPE TO SET
         try:
-            if asyncio.iscoroutinefunction(prop.prop_setter):
-                task: asyncio.Task = asyncio.ensure_future(
+            if inspect.iscoroutinefunction(prop.prop_setter):
+                task: asyncio.Task[Any] = asyncio.ensure_future(
                     prop.prop_setter(interface, value)
                 )
 
-                def set_property_callback(task_: asyncio.Task) -> None:
+                def set_property_callback(task_: asyncio.Task[Any]) -> None:
+                    _background_tasks.remove(task_)
                     try:
                         task_.result()
                     except Exception as e:
@@ -633,6 +673,7 @@ class ServiceInterface:
                     callback(interface, prop, None)
 
                 task.add_done_callback(set_property_callback)
+                _background_tasks.add(task)
                 return
 
             setattr(interface, prop.prop_setter.__name__, value)

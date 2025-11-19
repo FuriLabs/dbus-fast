@@ -1,5 +1,4 @@
 import xml.etree.ElementTree as ET
-from typing import Optional, Union
 
 from .constants import ArgDirection, PropertyAccess
 from .errors import InvalidIntrospectionError
@@ -50,10 +49,10 @@ class Arg:
 
     def __init__(
         self,
-        signature: Union[SignatureType, str],
-        direction: Optional[ArgDirection] = None,
-        name: Optional[str] = None,
-        annotations: Optional[dict[str, str]] = None,
+        signature: SignatureType | str,
+        direction: ArgDirection | None = None,
+        name: str | None = None,
+        annotations: dict[str, str] | None = None,
     ):
         type_ = None
         if type(signature) is SignatureType:
@@ -73,6 +72,7 @@ class Arg:
         self.direction = direction
         self.annotations = annotations or {}
 
+    @staticmethod
     def from_xml(element: ET.Element, direction: ArgDirection) -> "Arg":
         """Convert a :class:`xml.etree.ElementTree.Element` into a
         :class:`Arg`.
@@ -133,8 +133,8 @@ class Signal:
     def __init__(
         self,
         name: str,
-        args: Optional[list[Arg]] = None,
-        annotations: Optional[dict[str, str]] = None,
+        args: list[Arg] | None = None,
+        annotations: dict[str, str] | None = None,
     ):
         if name is not None:
             assert_member_name_valid(name)
@@ -144,7 +144,8 @@ class Signal:
         self.signature = "".join(arg.signature for arg in self.args)
         self.annotations = annotations or {}
 
-    def from_xml(element):
+    @staticmethod
+    def from_xml(element: ET.Element) -> "Signal":
         """Convert an :class:`xml.etree.ElementTree.Element` to a :class:`Signal`.
 
         The element must be valid DBus introspection XML for a ``signal``.
@@ -161,7 +162,7 @@ class Signal:
         if not name:
             raise InvalidIntrospectionError('signals must have a "name" attribute')
 
-        args = []
+        args: list[Arg] = []
         for child in element:
             if child.tag == "arg":
                 args.append(Arg.from_xml(child, ArgDirection.OUT))
@@ -210,7 +211,7 @@ class Method:
         name: str,
         in_args: list[Arg] = [],
         out_args: list[Arg] = [],
-        annotations: Optional[dict[str, str]] = None,
+        annotations: dict[str, str] | None = None,
     ):
         assert_member_name_valid(name)
 
@@ -221,6 +222,7 @@ class Method:
         self.out_signature = "".join(arg.signature for arg in out_args)
         self.annotations = annotations or {}
 
+    @staticmethod
     def from_xml(element: ET.Element) -> "Method":
         """Convert an :class:`xml.etree.ElementTree.Element` to a :class:`Method`.
 
@@ -238,8 +240,8 @@ class Method:
         if not name:
             raise InvalidIntrospectionError('interfaces must have a "name" attribute')
 
-        in_args = []
-        out_args = []
+        in_args: list[Arg] = []
+        out_args: list[Arg] = []
 
         for child in element:
             if child.tag == "arg":
@@ -295,7 +297,7 @@ class Property:
         name: str,
         signature: str,
         access: PropertyAccess = PropertyAccess.READWRITE,
-        annotations: Optional[dict[str, str]] = None,
+        annotations: dict[str, str] | None = None,
         validate: bool = True,
     ):
         if validate:
@@ -313,7 +315,8 @@ class Property:
         self.type = tree.types[0]
         self.annotations = annotations or {}
 
-    def from_xml(element, validate: bool = True):
+    @staticmethod
+    def from_xml(element: ET.Element, validate: bool = True) -> "Property":
         """Convert an :class:`xml.etree.ElementTree.Element` to a :class:`Property`.
 
         The element must be valid DBus introspection XML for a ``property``.
@@ -373,10 +376,10 @@ class Interface:
     def __init__(
         self,
         name: str,
-        methods: Optional[list[Method]] = None,
-        signals: Optional[list[Signal]] = None,
-        properties: Optional[list[Property]] = None,
-        annotations: Optional[dict[str, str]] = None,
+        methods: list[Method] | None = None,
+        signals: list[Signal] | None = None,
+        properties: list[Property] | None = None,
+        annotations: dict[str, str] | None = None,
     ):
         assert_interface_name_valid(name)
 
@@ -467,8 +470,8 @@ class Node:
 
     def __init__(
         self,
-        name: Optional[str] = None,
-        interfaces: Optional[list[Interface]] = None,
+        name: str | None = None,
+        interfaces: list[Interface] | None = None,
         is_root: bool = True,
     ):
         if not is_root and not name:
@@ -576,7 +579,7 @@ class Node:
         return header + ET.tostring(xml, encoding="unicode").rstrip()
 
     @staticmethod
-    def default(name: Optional[str] = None) -> "Node":
+    def default(name: str | None = None) -> "Node":
         """Create a :class:`Node` with the default interfaces supported by this library.
 
         The default interfaces include:

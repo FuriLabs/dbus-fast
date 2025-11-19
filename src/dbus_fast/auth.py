@@ -1,6 +1,5 @@
 import enum
 import os
-from typing import Optional
 
 from .errors import AuthError
 
@@ -25,9 +24,9 @@ class _AuthResponse(enum.Enum):
     AGREE_UNIX_FD = "AGREE_UNIX_FD"
 
     @classmethod
-    def parse(klass, line: str) -> tuple["_AuthResponse", list[str]]:
+    def parse(cls, line: str) -> tuple["_AuthResponse", list[str]]:
         args = line.split(" ")
-        response = klass(args[0])
+        response = cls(args[0])
         return response, args[1:]
 
 
@@ -65,10 +64,10 @@ class AuthExternal(Authenticator):
     :sealso: https://dbus.freedesktop.org/doc/dbus-specification.html#auth-protocol
     """
 
-    def __init__(self, uid: Optional[int] = None) -> None:
+    def __init__(self, uid: int | None = None) -> None:
         self.negotiate_unix_fd: bool = False
         self.negotiating_fds: bool = False
-        self.uid: Optional[int] = uid
+        self.uid: int | None = uid
 
     def _authentication_start(self, negotiate_unix_fd: bool = False) -> str:
         self.negotiate_unix_fd = negotiate_unix_fd

@@ -1,5 +1,8 @@
+# cython: freethreading_compatible = True
+
+from collections.abc import Callable
 from functools import lru_cache
-from typing import Any, Callable, Optional, Union
+from typing import Any
 
 from .errors import InvalidSignatureError, SignatureBodyMismatchError
 from .validators import is_object_path_valid
@@ -11,8 +14,8 @@ class SignatureType:  # noqa: PLW1641
     This class is not meant to be constructed directly. Use the :class:`SignatureTree`
     class to parse signatures.
 
-    :ivar ~.signature: The signature of this complete type.
-    :vartype ~.signature: str
+    :ivar signature: The signature of this complete type.
+    :vartype signature: str
 
     :ivar children: A list of child types if this is a container type. Arrays \
     have one child type, dict entries have two child types (key and value), and \
@@ -35,9 +38,9 @@ class SignatureType:  # noqa: PLW1641
         self.token: str = token
         self.token_as_int = ord(token)
         self.children: list[SignatureType] = []
-        self._child_0: Optional[SignatureType] = None
-        self._child_1: Optional[SignatureType] = None
-        self._signature: Optional[str] = None
+        self._child_0: SignatureType | None = None
+        self._child_1: SignatureType | None = None
+        self._signature: str | None = None
 
     def __eq__(self, other: object) -> bool:
         """Compare this type to another type or signature string."""
@@ -287,7 +290,7 @@ class SignatureType:  # noqa: PLW1641
 
         if len(body) != len(self.children):
             raise SignatureBodyMismatchError(
-                'DBus STRUCT type "(" must have Python list members equal to the number of struct type members'
+                'DBus STRUCT type "(" must have Python tuple members equal to the number of struct type members'
             )
 
         for i, member in enumerate(body):
@@ -346,11 +349,11 @@ class SignatureTree:  # noqa: PLW1641
     :ivar types: A list of parsed complete types.
     :vartype types: list(:class:`SignatureType`)
 
-    :ivar ~.signature: The signature of this signature tree.
-    :vartype ~.signature: str
+    :ivar signature: The signature of this signature tree.
+    :vartype signature: str
 
     :ivar root_type: The root type of this signature tree.
-    :vartype root_type: :class:`SignatureType
+    :vartype root_type: :class:`SignatureType`
 
     :raises:
         :class:`InvalidSignatureError` if the given signature is not valid.
@@ -424,7 +427,7 @@ class Variant:  # noqa: PLW1641
 
     def __init__(
         self,
-        signature: Union[str, SignatureTree, SignatureType],
+        signature: str | SignatureTree | SignatureType,
         value: Any,
         verify: bool = True,
     ) -> None:
