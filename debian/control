@@ -7,13 +7,14 @@ Priority: optional
 Build-Depends:
  debhelper-compat (= 13),
  dh-sequence-python3,
- dh-sequence-sphinxdoc,
- cython3 (>= 3.0.5),
- dbus <!nocheck>,
  pybuild-plugin-pyproject,
  python3-all,
  python3-all-dev,
  python3-poetry-core,
+Build-Depends-Arch:
+ dh-sequence-sphinxdoc,
+ cython3 (>= 3.0.5),
+ dbus-daemon <!nocheck>,
  python3-pytest <!nocheck>,
  python3-pytest-asyncio <!nocheck>,
  python3-pytest-cov <!nocheck>,

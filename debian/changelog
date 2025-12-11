@@ -1,3 +1,10 @@
+dbus-fast (3.1.2-2) unstable; urgency=medium
+
+  * Replace Build-Depends on dbus with dbus-daemon, as recommended for
+    packages using dbus-run-session. (Closes: #1122558)
+
+ -- Edward Betts <edward@4angle.com>  Thu, 11 Dec 2025 18:01:29 +0000
+
 dbus-fast (3.1.2-1) unstable; urgency=medium
 
   * New upstream release.

@@ -1,7 +1,7 @@
 Tests:
  run-tests,
 Depends:
- dbus,
+ dbus-daemon,
  python3-all,
  python3-poetry-core,
  python3-pytest,
