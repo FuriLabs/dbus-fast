@@ -1,3 +1,12 @@
+dbus-fast (4.0.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Remove 'Priority: optional', now the default.
+  * Update Standards-Version.
+  * Update copyright year.
+
+ -- Edward Betts <edward@4angle.com>  Thu, 05 Feb 2026 08:29:11 +0000
+
 dbus-fast (3.1.2-2) unstable; urgency=medium
 
   * Replace Build-Depends on dbus with dbus-daemon, as recommended for
