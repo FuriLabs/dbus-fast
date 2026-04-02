@@ -344,7 +344,7 @@ class Unmarshaller:
             self._unix_fds = []
         to_clear = HEADER_SIGNATURE_SIZE + self._msg_len
         if self._buf_len == to_clear:
-            self._buf = bytearray.__new__(bytearray)
+            del self._buf[:]
             self._buf_len = 0
         else:
             del self._buf[:to_clear]
@@ -536,10 +536,19 @@ class Unmarshaller:
         return self._read_variant()
 
     def _read_variant(self) -> Variant:
-        signature = self._read_signature()
-        token_as_int = ord(signature[0])
+        # Inline signature reading to avoid _read_signature() call,
+        # .decode(), and ord() for the common single-byte case.
         # verify in Variant is only useful on construction not unmarshalling
-        if len(signature) == 1:
+        if cython.compiled:
+            if self._buf_len <= self._pos:
+                raise IndexError("Not enough data to read signature")
+        signature_len = self._buf_ustr[self._pos]
+        if signature_len == 1:
+            self._pos += 3  # 1 len byte + 1 signature char + 1 null terminator
+            if cython.compiled:
+                if self._buf_len < self._pos:
+                    raise IndexError("Not enough data to read signature")
+            token_as_int = self._buf_ustr[self._pos - 2]
             if token_as_int == TOKEN_N_AS_INT:
                 return Variant._factory(SIGNATURE_TREE_N, self._read_int16_unpack())
             if token_as_int == TOKEN_S_AS_INT:
@@ -551,12 +560,22 @@ class Unmarshaller:
             if token_as_int == TOKEN_U_AS_INT:
                 return Variant._factory(SIGNATURE_TREE_U, self._read_uint32_unpack())
             if token_as_int == TOKEN_Y_AS_INT:
+                self._pos += 1
                 if cython.compiled:
                     if self._buf_len < self._pos:
                         raise IndexError("Not enough data to read byte")
-                self._pos += 1
                 return Variant._factory(SIGNATURE_TREE_Y, self._buf_ustr[self._pos - 1])
-        elif token_as_int == TOKEN_A_AS_INT:
+            # Uncommon single-byte type, decode for fallback
+            signature = chr(token_as_int)
+        else:
+            o = self._pos + 1
+            self._pos = o + signature_len + 1
+            if cython.compiled:
+                if self._buf_len < self._pos:
+                    raise IndexError("Not enough data to read signature")
+            signature = self._buf_ustr[o : o + signature_len].decode()
+            token_as_int = self._buf_ustr[o]
+        if token_as_int == TOKEN_A_AS_INT:
             if signature == "ay":
                 return Variant._factory(
                     SIGNATURE_TREE_AY, self.read_array(SIGNATURE_TREE_AY_TYPES_0)
@@ -718,7 +737,9 @@ class Unmarshaller:
                 headers[field_0] = self._read_string_unpack()
             elif token_as_int == TOKEN_G_AS_INT:
                 headers[field_0] = self._read_signature()
-            else:
+            elif token_as_int == TOKEN_U_AS_INT:
+                headers[field_0] = self._read_uint32_unpack()
+            else:  # pragma: no cover
                 token = self._buf_ustr[o : o + signature_len].decode()
                 # There shouldn't be any other types in the header
                 # but just in case, we'll read it using the slow path
@@ -825,6 +846,7 @@ class Unmarshaller:
         flags = MESSAGE_FLAG_MAP.get(self._flag)
         if flags is None:
             flags = MESSAGE_FLAG_INTENUM(self._flag)
+        reply_serial = header_fields[HEADER_REPLY_SERIAL_IDX]
         message = Message.__new__(Message)
         message._fast_init(
             header_fields[HEADER_DESTINATION_IDX],
@@ -834,7 +856,7 @@ class Unmarshaller:
             MESSAGE_TYPE_MAP[self._message_type],
             flags,
             header_fields[HEADER_ERROR_NAME_IDX],
-            header_fields[HEADER_REPLY_SERIAL_IDX] or 0,
+            reply_serial if reply_serial is not None else 0,
             header_fields[HEADER_SENDER_IDX],
             self._unix_fds,
             tree,

@@ -205,6 +205,8 @@ cdef class Unmarshaller:
     @cython.locals(
         tree=SignatureTree,
         token_as_int=cython.uint,
+        signature_len=cython.uint,
+        o=cython.ulong,
         var=Variant,
     )
     cdef Variant _read_variant(self)
@@ -243,7 +245,8 @@ cdef class Unmarshaller:
         token_as_int="unsigned int",
         signature=str,
         tree=SignatureTree,
-        message=Message
+        message=Message,
+        reply_serial=object,
     )
     cdef void _read_body(self) except *
 
