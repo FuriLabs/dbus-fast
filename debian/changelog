@@ -1,3 +1,9 @@
+dbus-fast (4.0.4-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Edward Betts <edward@4angle.com>  Thu, 02 Apr 2026 14:11:40 +0100
+
 dbus-fast (4.0.0-1) unstable; urgency=medium
 
   * New upstream release.
