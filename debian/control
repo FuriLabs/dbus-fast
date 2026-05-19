@@ -22,7 +22,7 @@ Build-Depends-Arch:
  python3-sphinx-rtd-theme,
  xauth <!nocheck>,
  xvfb <!nocheck>,
-Standards-Version: 4.7.3
+Standards-Version: 4.7.4
 Homepage: https://github.com/bluetooth-devices/dbus-fast
 Vcs-Browser: https://salsa.debian.org/python-team/packages/dbus-fast
 Vcs-Git: https://salsa.debian.org/python-team/packages/dbus-fast.git
