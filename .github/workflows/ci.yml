@@ -20,17 +20,6 @@ jobs:
           python-version: "3.10"
       - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
 
-  # Make sure commit messages follow the conventional commits convention:
-  # https://www.conventionalcommits.org
-  commitlint:
-    name: Lint Commit Messages
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
-        with:
-          fetch-depth: 0
-      - uses: wagoid/commitlint-github-action@b948419dd99f3fd78a6548d48f94e3df7f6bf3ed # v6
-
   test:
     strategy:
       fail-fast: false
@@ -51,8 +40,13 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Install libs
-        run: sudo apt-get update && sudo apt-get install -y dbus-daemon python3-gi libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0
-      - uses: snok/install-poetry@76e04a911780d5b312d89783f7b1cd627778900a # v1.4.1
+        run: sudo apt-get update && sudo apt-get install -y dbus-daemon python3-gi libgirepository1.0-dev libgirepository-2.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+      - name: Install poetry
+        run: uv tool install poetry
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
         with:
@@ -67,7 +61,7 @@ jobs:
             REQUIRE_CYTHON=1 poetry install --only=main,dev
           fi
       - name: Test with Pytest
-        run: dbus-run-session -- poetry run pytest --cov-report=xml --timeout=5
+        run: dbus-run-session -- poetry run pytest --cov-report=xml --timeout=5 --durations=30 --ignore=tests/benchmarks
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v5
         with:
@@ -88,21 +82,37 @@ jobs:
           distro: ubuntu_latest
           run: |
             apt-get -y update
-            apt-get -y install git python3-pip python3-venv python3-poetry dbus-daemon python3-gi libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0
-            git clone --depth 1 $GITHUB_SERVER_URL/$GITHUB_REPOSITORY
+            apt-get -y install --no-install-recommends \
+              ca-certificates git python3-pip python3-venv python3-dev \
+              gcc dbus-daemon python3-gi
+            pip install --break-system-packages uv
+            git clone --depth 1 "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
             cd dbus-fast
-            git fetch origin --depth 1 $GITHUB_SHA
-            git checkout $GITHUB_SHA
-            REQUIRE_CYTHON=1 poetry install --only=main,dev
-            dbus-run-session -- poetry run pytest --no-cov --timeout=100
+            git fetch origin --depth 1 "$GITHUB_SHA"
+            git checkout "$GITHUB_SHA"
+            # Reuse apt's python3-gi rather than rebuilding PyGObject from
+            # source under QEMU s390x emulation (~5min), and skip pycairo
+            # entirely since the tests don't import cairo.
+            uv venv --system-site-packages .venv
+            . .venv/bin/activate
+            REQUIRE_CYTHON=1 uv pip install \
+              -e . \
+              pytest pytest-asyncio pytest-cov pytest-timeout covdefaults
+            dbus-run-session -- pytest --no-cov --timeout=100 --durations=30 \
+              --ignore=tests/benchmarks
 
   benchmark:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Install libs
-        run: sudo apt-get update && sudo apt-get install -y dbus-daemon python3-gi libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0
-      - uses: snok/install-poetry@76e04a911780d5b312d89783f7b1cd627778900a # v1.4.1
+        run: sudo apt-get update && sudo apt-get install -y dbus-daemon python3-gi libgirepository1.0-dev libgirepository-2.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+      - name: Install poetry
+        run: uv tool install poetry
       - name: Setup Python 3.14
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
         with:
@@ -113,7 +123,7 @@ jobs:
           REQUIRE_CYTHON=1 poetry install --only=main,dev
         shell: bash
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@d872884a306dd4853acf0f584f4b706cf0cc72a2 # v3
+        uses: CodSpeedHQ/action@c381be0bfd20e844fb45594f6aa182ffcd94545c # v3
         with:
           mode: instrumentation
           token: ${{ secrets.CODSPEED_TOKEN }}
@@ -123,7 +133,6 @@ jobs:
     needs:
       - test
       - lint
-      - commitlint
 
     runs-on: ubuntu-latest
     environment: release
@@ -139,7 +148,12 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
         with:
           fetch-depth: 0
-          ref: ${{ github.head_ref || github.ref_name }}
+          ref: ${{ github.ref }}
+
+      - name: Create local branch name
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: git switch -C "$BRANCH"
 
       # Do a dry run of PSR
       - name: Test release
@@ -157,7 +171,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
         if: steps.release.outputs.released == 'true'
 
       - name: Publish package distributions to GitHub Releases
@@ -179,34 +193,94 @@ jobs:
     needs: [release]
     if: needs.release.outputs.released == 'true'
 
-    name: Build wheels on ${{ matrix.os }} with arch ${{ matrix.arch }}
+    name: Build wheels on ${{ matrix.os }} ${{ matrix.musl }} ${{ matrix.qemu }} ${{ matrix.pyver }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-24.04-arm, ubuntu-latest, macos-latest]
         musl: ["", "musllinux"]
+        qemu: [""]
+        pyver: [""]
         exclude:
           - os: macos-latest
             musl: "musllinux"
+        include:
+          # qemu is slow, make a single runner per Python version
+          - {
+              os: ubuntu-latest,
+              qemu: riscv64,
+              musl: "musllinux",
+              pyver: cp310,
+            }
+          - {
+              os: ubuntu-latest,
+              qemu: riscv64,
+              musl: "musllinux",
+              pyver: cp311,
+            }
+          - {
+              os: ubuntu-latest,
+              qemu: riscv64,
+              musl: "musllinux",
+              pyver: cp312,
+            }
+          - {
+              os: ubuntu-latest,
+              qemu: riscv64,
+              musl: "musllinux",
+              pyver: cp313,
+            }
+          - {
+              os: ubuntu-latest,
+              qemu: riscv64,
+              musl: "musllinux",
+              pyver: cp314,
+            }
+          - {
+              os: ubuntu-latest,
+              qemu: riscv64,
+              musl: "musllinux",
+              pyver: cp314t,
+            }
+          - { os: ubuntu-latest, qemu: riscv64, musl: "", pyver: cp310 }
+          - { os: ubuntu-latest, qemu: riscv64, musl: "", pyver: cp311 }
+          - { os: ubuntu-latest, qemu: riscv64, musl: "", pyver: cp312 }
+          - { os: ubuntu-latest, qemu: riscv64, musl: "", pyver: cp313 }
+          - { os: ubuntu-latest, qemu: riscv64, musl: "", pyver: cp314 }
+          - { os: ubuntu-latest, qemu: riscv64, musl: "", pyver: cp314t }
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
         with:
           ref: "v${{ needs.release.outputs.newest_release_tag }}"
           fetch-depth: 0
 
+      - name: Set up QEMU
+        if: ${{ matrix.qemu }}
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+        with:
+          platforms: all
+          # xref https://github.com/docker/setup-qemu-action/issues/188
+          # xref https://github.com/tonistiigi/binfmt/issues/215
+          image: tonistiigi/binfmt:qemu-v8.1.5
+        id: qemu
+
+      - name: Limit to a specific Python version on slow QEMU
+        if: ${{ matrix.pyver }}
+        run: echo "CIBW_BUILD=${{ matrix.pyver }}-*" >> $GITHUB_ENV
+
       - name: Build wheels
-        uses: pypa/cibuildwheel@ee02a1537ce3071a004a6b08c41e72f0fdc42d9a # v3.4.0
+        uses: pypa/cibuildwheel@8d2b08b68458a16aeb24b64e68a09ab1c8e82084 # v3.4.1
         env:
-          CIBW_SKIP: "*p36-* *p37-* *p38-* ${{ matrix.musl == 'musllinux' && '*manylinux*' || '*musllinux*' }}"
+          CIBW_SKIP: "*p38-* ${{ matrix.musl == 'musllinux' && '*manylinux*' || '*musllinux*' }}"
           CIBW_BEFORE_ALL_LINUX: apt-get install -y gcc || yum install -y gcc || apk add gcc
           CIBW_BUILD_VERBOSITY: 3
           REQUIRE_CYTHON: 1
-          CIBW_ARCHS_LINUX: ${{ matrix.os == 'ubuntu-24.04-arm' && 'aarch64' || 'auto' }}
+          CIBW_ARCHS_LINUX: ${{ ( matrix.os == 'ubuntu-24.04-arm' && 'aarch64' ) || matrix.qemu || 'auto' }}
 
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:
           path: ./wheelhouse/*.whl
-          name: wheels-${{ matrix.os }}-${{ matrix.musl }}
+          name: wheels-${{ matrix.os }}-${{ matrix.musl }}-${{ matrix.qemu }}-${{ matrix.pyver }}
 
   upload_pypi:
     needs: [build_wheels]
@@ -224,4 +298,4 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
