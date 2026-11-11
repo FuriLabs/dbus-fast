@@ -7,13 +7,14 @@ import io
 import logging
 import socket
 import xml.etree.ElementTree as ET
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from contextlib import ExitStack
 from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from . import introspection as intr
 from ._private.address import get_bus_address, parse_address
+from ._private.object_manager import _ObjectManager
 from ._private.util import replace_fds_with_idx, replace_idx_with_fds
 from .constants import (
     BusType,
@@ -30,7 +31,11 @@ from .proxy_object import BaseProxyObject
 from .send_reply import SendReply
 from .service import HandlerType, ServiceInterface, _Method, _Property
 from .signature import Variant
-from .validators import assert_bus_name_valid, assert_object_path_valid
+from .validators import (
+    assert_bus_name_valid,
+    assert_interface_name_valid,
+    assert_object_path_valid,
+)
 
 MESSAGE_TYPE_CALL = MessageType.METHOD_CALL
 MESSAGE_TYPE_SIGNAL = MessageType.SIGNAL
@@ -114,6 +119,7 @@ class BaseMessageBus:
         "_name_owner_match_rule",
         "_name_owners",
         "_negotiate_unix_fd",
+        "_object_managers",
         "_path_exports",
         "_serial",
         "_sock",
@@ -152,6 +158,7 @@ class BaseMessageBus:
         self._name_owners: dict[str, str] = {}
         # used for the high level service
         self._path_exports: dict[str, dict[str, ServiceInterface]] = {}
+        self._object_managers: dict[str, _ObjectManager] = {}
         self._bus_address = (
             parse_address(bus_address)
             if bus_address
@@ -257,6 +264,34 @@ class BaseMessageBus:
 
         self._emit_interface_removed(path, removed_interface_names)
 
+    def export_object_manager(
+        self, path: str, *, required_interfaces: Collection[str] = ()
+    ) -> None:
+        """Register an ObjectManager for descendants with all required interfaces.
+
+        Register before exporting objects on or below ``path``. Registrations
+        must not overlap and last until disconnect. All interfaces on matching
+        objects are managed; other objects remain accessible through direct calls.
+        Unregistered subtrees retain their default ObjectManager behavior.
+        """
+        assert_object_path_valid(path)
+        if isinstance(required_interfaces, str):
+            raise TypeError(
+                "required_interfaces must be a collection of interface names"
+            )
+        required = frozenset(required_interfaces)
+        for interface_name in required:
+            assert_interface_name_valid(interface_name)
+        manager = _ObjectManager(self, path, required)
+        if any(
+            registered.contains(path) or manager.contains(registered.path)
+            for registered in self._object_managers.values()
+        ):
+            raise ValueError("ObjectManager registrations must not overlap")
+        if any(manager.contains(exported) for exported in self._path_exports):
+            raise ValueError("Register the ObjectManager before exporting its objects")
+        self._object_managers[path] = manager
+
     def introspect(
         self,
         bus_name: str,
@@ -328,6 +363,11 @@ class BaseMessageBus:
         if self._disconnected:
             return
 
+        for manager in self._object_managers.values():
+            if manager.contains(path):
+                manager.interfaces_changed(path)
+                return
+
         def get_properties_callback(
             interface: ServiceInterface,
             result: Any,
@@ -372,6 +412,11 @@ class BaseMessageBus:
         """
         if self._disconnected:
             return
+
+        for manager in self._object_managers.values():
+            if manager.contains(path):
+                manager.interfaces_changed(path)
+                return
 
         self.send(
             Message.new_signal(
@@ -614,6 +659,10 @@ class BaseMessageBus:
 
         self._method_return_handlers.clear()
 
+        for manager in self._object_managers.values():
+            manager.close()
+        self._object_managers.clear()
+
         for path in list(self._path_exports):
             self.unexport(path)
 
@@ -639,6 +688,15 @@ class BaseMessageBus:
                 "Could not find interface on bus (this is a bug in dbus-fast)"
             )
 
+        if (
+            interface_name == "org.freedesktop.DBus.Properties"
+            and member == "PropertiesChanged"
+        ):
+            for manager in self._object_managers.values():
+                if manager.contains(path):
+                    manager.properties_changed(path, interface, body[1], body[2])
+                    break
+
         self.send(
             Message.new_signal(
                 path=path,
@@ -660,9 +718,25 @@ class BaseMessageBus:
         else:
             node = intr.Node(path)
 
+        for manager in self._object_managers.values():
+            if path == manager.path:
+                if interfaces is None:
+                    node = intr.Node.default(path)
+                break
+            if manager.contains(path):
+                interfaces_without_manager = []
+                for introspected_interface in node.interfaces:
+                    if (
+                        introspected_interface.name
+                        != "org.freedesktop.DBus.ObjectManager"
+                    ):
+                        interfaces_without_manager.append(introspected_interface)
+                node.interfaces = interfaces_without_manager
+                break
+
         children = set()
 
-        for export_path in self._path_exports:
+        for export_path in self._path_exports.keys() | self._object_managers.keys():
             if not export_path.startswith(path):
                 continue
 
@@ -954,6 +1028,15 @@ class BaseMessageBus:
                 msg.interface == "org.freedesktop.DBus.ObjectManager"
                 and msg.member == "GetManagedObjects"
             ):
+                if msg.path in self._object_managers:
+                    if msg.signature != "":
+                        return None
+                    return self._object_managers[msg.path].get_managed_objects
+                if any(
+                    manager.contains(msg.path)
+                    for manager in self._object_managers.values()
+                ):
+                    return None
                 return self._default_get_managed_objects_handler
 
         if (interfaces := self._path_exports.get(msg.path)) is None:
@@ -1101,12 +1184,14 @@ class BaseMessageBus:
                 "getting and setting properties with an empty interface string is not supported yet",
             )
 
-        if msg.path not in self._path_exports:
+        if msg.path not in self._path_exports and msg.path not in self._object_managers:
             raise DBusError(
                 ErrorType.UNKNOWN_OBJECT, f'no interfaces at path: "{msg.path}"'
             )
 
-        if (interface := self._path_exports[msg.path].get(interface_name)) is None:
+        if (
+            interface := self._path_exports.get(msg.path, {}).get(interface_name)
+        ) is None:
             if interface_name in [
                 "org.freedesktop.DBus.Properties",
                 "org.freedesktop.DBus.Introspectable",
